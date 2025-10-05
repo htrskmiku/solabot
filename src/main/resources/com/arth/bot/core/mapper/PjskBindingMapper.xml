@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.arth.bot.core.mapper.PjskBindingMapper">
+
+    <resultMap id="BaseResultMap" type="com.arth.bot.core.domain.PjskBinding">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="pjskId" column="pjsk_id" jdbcType="VARCHAR"/>
+            <result property="qqNumber" column="qq_number" jdbcType="BIGINT"/>
+            <result property="groupId" column="group_id" jdbcType="BIGINT"/>
+            <result property="serverRegion" column="server_region" jdbcType="CHAR"/>
+            <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+            <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,pjsk_id,qq_number,group_id,server_region,created_at,
+        updated_at
+    </sql>
+</mapper>
