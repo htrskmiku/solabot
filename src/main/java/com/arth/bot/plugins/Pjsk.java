@@ -4,6 +4,8 @@ import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InvalidCommandArgsException;
 import com.arth.bot.core.domain.PjskBinding;
+import com.arth.bot.core.invoker.annotation.BotCommand;
+import com.arth.bot.core.invoker.annotation.BotPlugin;
 import com.arth.bot.core.mapper.PjskBindingMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import java.util.Date;
 import java.util.List;
 
 @Component("plugins.pjsk")
+@BotPlugin({"pjsk"})
 @RequiredArgsConstructor
 public class Pjsk {
 
@@ -20,10 +23,15 @@ public class Pjsk {
     private final PjskBindingMapper pjskBindingMapper;
 
     public void index(ParsedPayloadDTO payload) {
+        sender.responseText(payload, "请接 pjsk 模块的具体命令哦");
     }
 
+    @BotCommand({"绑定"})
     public void bind(ParsedPayloadDTO payload, List<String> args) {
-        if (args.isEmpty()) throw new InvalidCommandArgsException("lack of argument");
+        if (args.isEmpty()) {
+            bound(payload);
+            return;
+        }
 
         long qqId = payload.getUserId();
         Long groupId = payload.getGroupId();
@@ -33,6 +41,7 @@ public class Pjsk {
         binding.setPjskId(pjskId);
         binding.setQqNumber(qqId);
         binding.setGroupId(groupId);
+        binding.setServerRegion("xx");
 
         binding.setCreatedAt(new Date());
         binding.setUpdatedAt(new Date());
@@ -41,7 +50,8 @@ public class Pjsk {
         sender.sendText(payload, "bind successfully!");
     }
 
-    public void check(ParsedPayloadDTO payload) {
+    @BotCommand({"查询绑定"})
+    public void bound(ParsedPayloadDTO payload) {
         long qqId = payload.getUserId();
         LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(PjskBinding::getQqNumber, qqId);

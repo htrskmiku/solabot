@@ -11,6 +11,7 @@ import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
 import com.arth.bot.core.common.dto.replay.ImageRef;
 import com.arth.bot.core.common.dto.replay.MediaSourceType;
+import com.arth.bot.core.invoker.annotation.BotPlugin;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Objects;
 
+@BotPlugin({"test"})
 @Component("plugins.test")
 @RequiredArgsConstructor
 public class Test {
