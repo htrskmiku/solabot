@@ -75,8 +75,9 @@ public class Pjsk {
     @BotCommand({"查询绑定"})
     public void bound(ParsedPayloadDTO payload) {
         long qqId = payload.getUserId();
+        Long groupId = payload.getGroupId();
         LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PjskBinding::getQqNumber, qqId);
+        queryWrapper.eq(PjskBinding::getQqNumber, qqId).eq(PjskBinding::getGroupId, groupId);;
         PjskBinding binding = pjskBindingMapper.selectOne(queryWrapper);
         if (binding == null) {
             sender.responseText(payload, "you haven't bound any pjsk id yet");
@@ -87,8 +88,9 @@ public class Pjsk {
 
     public void msm(ParsedPayloadDTO payload) {
         long qqId = payload.getUserId();
+        Long groupId = payload.getGroupId();
         LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PjskBinding::getQqNumber, qqId);
+        queryWrapper.eq(PjskBinding::getQqNumber, qqId).eq(PjskBinding::getGroupId, groupId);;
         PjskBinding binding = pjskBindingMapper.selectOne(queryWrapper);
 
         if (binding == null) {
@@ -98,6 +100,7 @@ public class Pjsk {
 
         String pjskId = binding.getPjskId();
         String overviewImgUrl = "http://" + clientAccessUrl + ":" + port + "/resource/cn/mysekai/" + pjskId + "/overview";
+        System.out.println(overviewImgUrl);
         String mapImgUrl = "http://" + clientAccessUrl + ":" + port + "/resource/cn/mysekai/" + pjskId + "/map";
         sender.responseImage(payload, List.of(overviewImgUrl, mapImgUrl));
     }

@@ -101,10 +101,8 @@ public class Test {
      * @param payload
      */
     public void zhuanfa(ParsedPayloadDTO payload, List<String> args) {
-        System.out.println(args.toString());
         long idd = Long.parseLong(args.get(0));
         String json = forwardChainBuilder.create()
-                .addRefNode(payload.getGroupId())
                 .addCustomNode(idd, args.get(1), n -> n.text(args.get(2)))
                 .toGroupJson(payload.getGroupId());
 

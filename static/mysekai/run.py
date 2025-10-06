@@ -5,7 +5,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from listener import create_app
 from parser import parse_map
-from config import MYSEKAI_RAW_DIR, MYSEKAI_PARSED_DIR, MYSEKAI_DRAW_MAP_DIR, MYSEKAI_DRAW_OVERVIEW_DIR, MYSEKAI_PARSE_FAIL_DIR, PORT, ONLY_RARE
+from config import MYSEKAI_RAW_DIR, MYSEKAI_PARSED_DIR, MYSEKAI_DRAW_MAP_DIR, MYSEKAI_DRAW_OVERVIEW_DIR, MYSEKAI_PARSE_FAIL_DIR, IN_PORT, ONLY_RARE
 
 os.environ["PJ_RES_DIR"] = os.path.join(
     os.path.dirname(__file__),
@@ -52,7 +52,7 @@ async def main():
     queue = asyncio.Queue()
     app = create_app(queue)
 
-    config = uvicorn.Config(app, host="0.0.0.0", port=PORT, log_level="info", loop="asyncio")
+    config = uvicorn.Config(app, host="0.0.0.0", port=IN_PORT, log_level="info", loop="asyncio")
     server = uvicorn.Server(config)
 
     listener_task = asyncio.create_task(server.serve())

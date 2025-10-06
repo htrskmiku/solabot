@@ -20,6 +20,13 @@ redis-cli
 docker stop $(docker ps -q)
 ```
 
+# maven
+
+```bash
+mvn clean package
+mvn spring-boot:run  # java -jar target/bot-0.0.1-SNAPSHOT.jar
+```
+
 # version
 
 OpenJDK 17+

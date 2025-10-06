@@ -4,7 +4,7 @@ create table if not exists t_pjsk_binding
     id            bigserial primary key,
     pjsk_id       varchar(64) not null,
     qq_number     bigint      not null,
-    group_id      bigint      not null,
+    group_id      bigint,
     server_region CHAR(2)     NOT NULL CHECK (server_region IN ('cn', 'jp', 'tw', 'kr', 'en', 'xx')),
     created_at    timestamptz default now(),
     updated_at    timestamptz default now(),

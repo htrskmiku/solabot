@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.responses import PlainTextResponse, Response
-from config import PORT, LOCAL_IP, MYSEKAI_RAW_DIR, GAME_SERVER_MAP
+from config import IN_PORT, OUT_PORT, LOCAL_IP, MYSEKAI_RAW_DIR, GAME_SERVER_MAP
 
 app = FastAPI(
     title="MySekai Listener",
@@ -50,7 +50,7 @@ def create_app(queue=None):
         js_content = f"""
         const upload = () => {{
             $httpClient.post({{
-                url: "http://{LOCAL_IP}:{PORT}/upload",
+                url: "https://{LOCAL_IP}:{OUT_PORT}/upload",
                 headers: {{ 
                     "X-Original-Url": $request.url,
                     "X-Request-Path": $request.path
@@ -104,14 +104,14 @@ def create_app(queue=None):
 if __name__ == "__main__":
     import uvicorn
     
-    print(f"Universal Data Receiver running at http://0.0.0.0:{PORT}")
+    print(f"Universal Data Receiver running at http://0.0.0.0:{IN_PORT}")
     print("File naming format: [api_type]_[user].bin\n")
     
     try:
         uvicorn.run(
             app, 
             host="0.0.0.0", 
-            port=PORT,
+            port=IN_PORT,
             log_level="info"
         )
     except KeyboardInterrupt:

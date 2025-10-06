@@ -1,6 +1,6 @@
 server:
   address: 0.0.0.0
-  port: 3469
+  port: 8848
 
 app:
   client-access-url: "${CLIENT_ACCESS_URL:localhost}"
