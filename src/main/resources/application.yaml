@@ -1,6 +1,9 @@
 server:
-  address: "0.0.0.0"
+  address: 0.0.0.0
   port: 3469
+
+app:
+  client-access-url: "${CLIENT_ACCESS_URL:localhost}"
 
 logging:
   level:
@@ -9,7 +12,7 @@ logging:
 
 onebot:
   websocket:
-    path: /onebot/v11/ws
+    suffix: /onebot/v11/ws
     allowed-origins: "*"
 
 #core:
@@ -30,10 +33,7 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
-      username: default
-      password: ""
+      url: redis://localhost:6379
 
   cache:
     type: redis

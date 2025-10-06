@@ -20,6 +20,7 @@ public class Help {
                 - pjsk:
                     - 绑定 xxx: 绑定 pjsk 账号
                     - 查询绑定: 查看 pjsk 账号的绑定
+                    - msm: 查看 mysekai
                     
                 - test:
                     - quanxian: 测试鉴权切面，硬编码仅允许 1093664084

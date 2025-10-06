@@ -31,6 +31,12 @@ public class Test {
     private final ForwardChainBuilder forwardChainBuilder;
     private final ReplyFetcher replyFetcher;
 
+    @Value("${server.port}")
+    private String port;
+
+    @Value("${app.client-access-url}")
+    private String clientAccessUrl;
+
     /**
      * 权限测试
      * @param payload
@@ -76,10 +82,8 @@ public class Test {
     /**
      * 图片发送测试
      */
-    @Value("${server.port}")
-    private String port;
     public void tu(ParsedPayloadDTO payload) {
-        String url = "http://localhost:" + port + "/saki.jpg";
+        String url = "http://" + clientAccessUrl + ":" + port + "/saki.jpg";
         sender.responseImage(payload, List.of(url, url, url));
     }
 
@@ -88,7 +92,7 @@ public class Test {
      * @param payload
      */
     public void shipin(ParsedPayloadDTO payload) {
-        String url = "http://localhost:" + port + "/icsk.mp4";
+        String url = "http://" + clientAccessUrl + ":" + port + "/icsk.mp4";
         sender.sendVideo(payload, url);
     }
 
@@ -146,7 +150,7 @@ public class Test {
     }
 
     /**
-     * 测试 bot 获取非文本引用消息
+     * 测试 bot 获取参数
      * @param payload
      */
     public void canshu(ParsedPayloadDTO payload, List<String> args) {

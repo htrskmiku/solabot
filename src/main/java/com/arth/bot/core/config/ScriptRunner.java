@@ -1,4 +1,4 @@
-package com.arth.bot.plugins.scripts;
+package com.arth.bot.core.config;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -16,7 +16,7 @@ public class ScriptRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        String scriptPath = "src/main/java/com/arth/bot/plugins/scripts/mysekai/run.py";
+        String scriptPath = "static/mysekai/run.py";
         runPythonScript(scriptPath);
     }
 

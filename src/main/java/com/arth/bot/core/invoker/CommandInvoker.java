@@ -20,6 +20,8 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static java.lang.reflect.Modifier.isPublic;
+
 /**
  * CommandInvoker — 使用 CommandHolder 与别名表实现一次性初始化、按别名路由、并保留签名优先级选择
  */
@@ -64,6 +66,8 @@ public class CommandInvoker {
 
             Map<String, List<Method>> cmdRegistry = holder.commandRegistry;
             for (Method m : targetClass.getDeclaredMethods()) {
+                if (!isPublic(m.getModifiers())) continue;
+
                 // 同样地，小心动态代理抹掉了方法注解
                 BotCommand cmdAnno = AnnotationUtils.findAnnotation(m, BotCommand.class);
 
@@ -333,7 +337,7 @@ public class CommandInvoker {
                 throw (BusinessException) cause;
             }
             log.error("[core.invoker] unable to invoke method: " + m.getName(), e);
-            throw new InternalServerErrorException("Internal Server Error: " + e.getMessage(), "服务器内部错误：未知的反射执行时异常");
+            throw new InternalServerErrorException("Internal Server Error: " + cause.getMessage(), "服务器内部错误：未知的反射执行时异常");
         }
     }
 

@@ -16,7 +16,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final String allowedOrigins;
 
     public WebSocketConfig(OneBotWsController wsController,
-                           @Value("${onebot.websocket.path}") String websocketPath,
+                           @Value("${onebot.websocket.suffix}") String websocketPath,
                            @Value("${onebot.websocket.allowed-origins}") String allowedOrigins) {
         this.wsController = wsController;
         this.websocketPath = websocketPath;
