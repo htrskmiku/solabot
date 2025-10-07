@@ -16,12 +16,13 @@ public class Help {
     private final ForwardChainBuilder forwardChainBuilder;
 
     public void index(ParsedPayloadDTO payload) {
-        String json = forwardChainBuilder.create()
+        ForwardChainBuilder built = forwardChainBuilder.create()
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                        这是 solabot，正宗的纯血 java bot，目前支持以下三个模块：
+                        这是 solabot，正宗的纯血 java 国产自研（？）bot，目前支持以下三个模块：
                           1. pjsk 啤酒烧烤
                           2. img 图片处理
-                          3. test 测试"""))
+                          3. test 测试
+                        命令的使用实例：/pjsk 绑定"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         pjsk 啤酒烧烤模块目前支持以下命令：
                           - 绑定 xxx: 绑定 pjsk 账号
@@ -30,7 +31,7 @@ public class Help {
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                        👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服为例（其实目前也只硬编码了国服，其他服建议用 hrk 的）："""))
+                        👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服为例（其实目前也只硬编码了国服，其他服建议用 hrk 的，需要其他服的联系我）："""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         #!name=国服烤森远程转发
                         #!desc=抓取游戏数据并转发到远程服务器
@@ -47,6 +48,8 @@ public class Help {
                         [Mitm]
                         hostname=%APPEND% mkcn-prod-public-60001-1.dailygn.com, submit.backtrace.io"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
+                        模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块替换为我们的"""))
+                .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         img 图片处理模块目前支持以下命令：
                         还没写好"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
@@ -57,8 +60,10 @@ public class Help {
                           - tu: 测试发图
                           - shipin: 测试发视频
                           - zhuanfa <QQid> <QQname> <text>: 测试链式构造合并转发消息
-                          - yinyong <args...>: 测试 bot 获取图片引用消息"""))
-                .toGroupJson(payload.getGroupId());
+                          - yinyong <args...>: 测试 bot 获取图片引用消息"""));
+
+        String json = (payload.getGroupId() != null) ?
+                built.toGroupJson(payload.getGroupId()) :built.toPrivateJson(payload.getUserId());
 
         sender.pushActionJSON(payload.getSelfId(), json);
     }

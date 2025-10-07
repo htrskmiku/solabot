@@ -2,6 +2,8 @@
 
 设计仅为重庆大学烤群使用的 bot。
 
+基于 OneBot v11 协议。
+
 # docker
 
 ```bash

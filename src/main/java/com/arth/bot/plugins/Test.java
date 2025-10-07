@@ -102,9 +102,11 @@ public class Test {
      */
     public void zhuanfa(ParsedPayloadDTO payload, List<String> args) {
         long idd = Long.parseLong(args.get(0));
-        String json = forwardChainBuilder.create()
-                .addCustomNode(idd, args.get(1), n -> n.text(args.get(2)))
-                .toGroupJson(payload.getGroupId());
+        ForwardChainBuilder built = forwardChainBuilder.create()
+                .addCustomNode(idd, args.get(1), n -> n.text(args.get(2)));
+
+        String json = (payload.getGroupId() != null) ?
+                built.toGroupJson(payload.getGroupId()) :built.toPrivateJson(payload.getUserId());
 
         sender.pushActionJSON(payload.getSelfId(), json);
     }

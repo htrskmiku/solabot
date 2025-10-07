@@ -9,8 +9,9 @@ import com.arth.bot.core.common.dto.replay.ImageRef;
 import com.arth.bot.core.common.dto.replay.MediaSourceType;
 import com.arth.bot.core.common.dto.replay.VideoRef;
 
-public final class CQHelpers {
-    private CQHelpers() {}
+public final class CQHelper {
+
+    private CQHelper() {}
 
     // [CQ:image,...] / [CQ:record,...] / [CQ:video,...]
     // group(1)=type, group(2)= ",k=v,k=v"

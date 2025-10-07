@@ -2,7 +2,7 @@ package com.arth.bot.adapter.fetcher.impl;
 
 import com.arth.bot.adapter.fetcher.ReplyFetcher;
 import com.arth.bot.adapter.sender.Sender;
-import com.arth.bot.adapter.util.CQHelpers;
+import com.arth.bot.adapter.util.CQHelper;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
 import com.arth.bot.core.common.dto.replay.AudioRef;
 import com.arth.bot.core.common.dto.replay.ImageRef;
@@ -50,7 +50,7 @@ public class OneBotReplyFetcher implements ReplyFetcher {
                 }
             }
         } else {
-            CQHelpers.fillFromCQ(msg.asText(""), dto);
+            CQHelper.fillFromCQ(msg.asText(""), dto);
         }
         return dto;
     }

@@ -135,7 +135,7 @@ public class OneBotActionBuilder implements ActionBuilder {
 
         Map<String, Object> replySeg = new HashMap<>();
         replySeg.put("type", "reply");
-        replySeg.put("data", Map.of("id", String.valueOf(messageId)));
+        replySeg.put("data", Map.of("message_id", String.valueOf(messageId)));
 
         Map<String, Object> textSeg = new HashMap<>();
         textSeg.put("type", "text");
@@ -185,7 +185,7 @@ public class OneBotActionBuilder implements ActionBuilder {
 
         Map<String, Object> replySeg = new HashMap<>();
         replySeg.put("type", "reply");
-        replySeg.put("data", Map.of("id", String.valueOf(messageId)));
+        replySeg.put("data", Map.of("message_id", String.valueOf(messageId)));
 
         Map<String, Object> imgSeg = new HashMap<>();
         imgSeg.put("type", "image");
