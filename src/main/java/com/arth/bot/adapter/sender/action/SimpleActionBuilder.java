@@ -3,7 +3,7 @@ package com.arth.bot.adapter.sender.action;
 import java.util.List;
 import java.util.Map;
 
-public interface ActionBuilder {
+public interface SimpleActionBuilder {
 
     /**
      * 构建纯文本内容的响应群聊 action 的 JSON
@@ -28,7 +28,7 @@ public interface ActionBuilder {
      * @param text
      * @return
      */
-    String buildGroupResponseTextAction(long groupId, long messageId, String text);
+    String buildGroupReplyTextAction(long groupId, long messageId, String text);
 
     /**
      * 构建纯文本内容的回复私聊 action 的 JSON
@@ -37,7 +37,7 @@ public interface ActionBuilder {
      * @param text
      * @return
      */
-    String buildPrivateResponseTextAction(long userId, long messageId, String text);
+    String buildPrivateReplyTextAction(long userId, long messageId, String text);
 
     /**
      * 构建图片内容的响应群聊 action 的 JSON
@@ -62,7 +62,7 @@ public interface ActionBuilder {
      * @param file
      * @return
      */
-    String buildGroupResponseImageAction(long groupId, long messageId, String file);
+    String buildGroupReplyImageAction(long groupId, long messageId, String file);
 
     /**
      * 构建图片内容的回复私聊 action 的 JSON
@@ -71,7 +71,7 @@ public interface ActionBuilder {
      * @param file
      * @return
      */
-    String buildPrivateResponseImageAction(long userId, long messageId, String file);
+    String buildPrivateReplyImageAction(long userId, long messageId, String file);
 
     /**
      * 构建发送视频至群聊的 action 的 JSON

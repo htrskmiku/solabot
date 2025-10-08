@@ -18,16 +18,17 @@ public class Help {
     public void index(ParsedPayloadDTO payload) {
         ForwardChainBuilder built = forwardChainBuilder.create()
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                        这是 solabot，正宗的纯血 java 国产自研（？）bot，目前支持以下三个模块：
+                        这里是 solabot，正宗的纯血 java 国产自研（？）bot（后端），仅为风翼/翼遥烤群设计，目前支持以下三个模块：
                           1. pjsk 啤酒烧烤
                           2. img 图片处理
                           3. test 测试
                         命令的使用实例：/pjsk 绑定"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         pjsk 啤酒烧烤模块目前支持以下命令：
-                          - 绑定 xxx: 绑定 pjsk 账号
-                          - 查询绑定: 查看 pjsk 账号的绑定
-                          - msm: 查看绑定的 mysekai"""))
+                          - 绑定 <pjsk id>: 绑定 pjsk 账号
+                          - 绑定 / 查询绑定: 查看 pjsk 账号的绑定
+                          - msm: 查看绑定的 mysekai
+                          - 初始化: 需要权限，初始化数据库"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""

@@ -1,6 +1,6 @@
 package com.arth.bot.adapter.sender.action.impl;
 
-import com.arth.bot.adapter.sender.action.ActionBuilder;
+import com.arth.bot.adapter.sender.action.SimpleActionBuilder;
 import com.arth.bot.adapter.sender.action.ForwardChainBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,16 +15,16 @@ import java.util.function.Consumer;
 public class OneBotForwardChainBuilder implements ForwardChainBuilder {
 
     private final List<Map<String, Object>> nodes = new ArrayList<>();
-    private final ActionBuilder actionBuilder;
+    private final SimpleActionBuilder simpleActionBuilder;
 
     @Autowired
-    public OneBotForwardChainBuilder(ActionBuilder actionBuilder) {
-        this.actionBuilder = actionBuilder;
+    public OneBotForwardChainBuilder(SimpleActionBuilder simpleActionBuilder) {
+        this.simpleActionBuilder = simpleActionBuilder;
     }
 
     @Override
     public ForwardChainBuilder create() {
-        return new OneBotForwardChainBuilder(actionBuilder);
+        return new OneBotForwardChainBuilder(simpleActionBuilder);
     }
 
     /**
@@ -64,7 +64,7 @@ public class OneBotForwardChainBuilder implements ForwardChainBuilder {
      */
     @Override
     public String toGroupJson(long groupId) {
-        return actionBuilder.buildGroupForwardAction(groupId, nodes);
+        return simpleActionBuilder.buildGroupForwardAction(groupId, nodes);
     }
 
     /**
@@ -72,7 +72,7 @@ public class OneBotForwardChainBuilder implements ForwardChainBuilder {
      */
     @Override
     public String toPrivateJson(long userId) {
-        return actionBuilder.buildPrivateForwardAction(userId, nodes);
+        return simpleActionBuilder.buildPrivateForwardAction(userId, nodes);
     }
 
     /**

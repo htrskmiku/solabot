@@ -3,15 +3,15 @@ create table if not exists t_pjsk_binding
 (
     id            bigserial primary key,
     pjsk_id       varchar(64) not null,
-    qq_number     bigint      not null,
+    user_id       bigint      not null,
     group_id      bigint,
     server_region CHAR(2)     NOT NULL CHECK (server_region IN ('cn', 'jp', 'tw', 'kr', 'en', 'xx')),
     created_at    timestamptz default now(),
     updated_at    timestamptz default now(),
-    unique (pjsk_id, qq_number, group_id)
+    unique (pjsk_id, user_id, group_id)
 );
 create index if not exists idx_pjsk_binding_pjsk on t_pjsk_binding (pjsk_id);
-create index if not exists idx_pjsk_binding_qq on t_pjsk_binding (qq_number);
+create index if not exists idx_pjsk_binding_qq on t_pjsk_binding (user_id);
 create index if not exists idx_pjsk_binding_group on t_pjsk_binding (group_id);
 
 -- 用户表

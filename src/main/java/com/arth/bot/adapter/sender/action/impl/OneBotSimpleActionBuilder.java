@@ -1,6 +1,6 @@
 package com.arth.bot.adapter.sender.action.impl;
 
-import com.arth.bot.adapter.sender.action.ActionBuilder;
+import com.arth.bot.adapter.sender.action.SimpleActionBuilder;
 import com.arth.bot.core.common.dto.OneBotReturnActionDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class OneBotActionBuilder implements ActionBuilder {
+public class OneBotSimpleActionBuilder implements SimpleActionBuilder {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -26,13 +26,13 @@ public class OneBotActionBuilder implements ActionBuilder {
     }
 
     @Override
-    public String buildGroupResponseTextAction(long groupId, long messageId, String text) {
-        return buildResponseText("group", Map.of("group_id", groupId), messageId, text);
+    public String buildGroupReplyTextAction(long groupId, long messageId, String text) {
+        return buildReplyText("group", Map.of("group_id", groupId), messageId, text);
     }
 
     @Override
-    public String buildPrivateResponseTextAction(long userId, long messageId, String text) {
-        return buildResponseText("private", Map.of("user_id", userId), messageId, text);
+    public String buildPrivateReplyTextAction(long userId, long messageId, String text) {
+        return buildReplyText("private", Map.of("user_id", userId), messageId, text);
     }
 
     @Override
@@ -46,13 +46,13 @@ public class OneBotActionBuilder implements ActionBuilder {
     }
 
     @Override
-    public String buildGroupResponseImageAction(long groupId, long messageId, String file) {
-        return buildResponseImage("group", Map.of("group_id", groupId), messageId, file);
+    public String buildGroupReplyImageAction(long groupId, long messageId, String file) {
+        return buildReplyImage("group", Map.of("group_id", groupId), messageId, file);
     }
 
     @Override
-    public String buildPrivateResponseImageAction(long userId, long messageId, String file) {
-        return buildResponseImage("private", Map.of("user_id", userId), messageId, file);
+    public String buildPrivateReplyImageAction(long userId, long messageId, String file) {
+        return buildReplyImage("private", Map.of("user_id", userId), messageId, file);
     }
 
     @Override
@@ -125,7 +125,7 @@ public class OneBotActionBuilder implements ActionBuilder {
         }
     }
 
-    private String buildResponseText(String messageType, Map<String, Object> target, long messageId, String text) {
+    private String buildReplyText(String messageType, Map<String, Object> target, long messageId, String text) {
         OneBotReturnActionDTO dto = new OneBotReturnActionDTO();
         dto.setAction("send_msg");
         dto.setEcho("echo-" + System.currentTimeMillis());
@@ -135,7 +135,7 @@ public class OneBotActionBuilder implements ActionBuilder {
 
         Map<String, Object> replySeg = new HashMap<>();
         replySeg.put("type", "reply");
-        replySeg.put("data", Map.of("message_id", String.valueOf(messageId)));
+        replySeg.put("data", Map.of("id", String.valueOf(messageId)));
 
         Map<String, Object> textSeg = new HashMap<>();
         textSeg.put("type", "text");
@@ -175,7 +175,7 @@ public class OneBotActionBuilder implements ActionBuilder {
         }
     }
 
-    private String buildResponseImage(String messageType, Map<String, Object> target, long messageId, String file) {
+    private String buildReplyImage(String messageType, Map<String, Object> target, long messageId, String file) {
         OneBotReturnActionDTO dto = new OneBotReturnActionDTO();
         dto.setAction("send_msg");
         dto.setEcho("echo-" + System.currentTimeMillis());
@@ -185,7 +185,7 @@ public class OneBotActionBuilder implements ActionBuilder {
 
         Map<String, Object> replySeg = new HashMap<>();
         replySeg.put("type", "reply");
-        replySeg.put("data", Map.of("message_id", String.valueOf(messageId)));
+        replySeg.put("data", Map.of("id", String.valueOf(messageId)));
 
         Map<String, Object> imgSeg = new HashMap<>();
         imgSeg.put("type", "image");

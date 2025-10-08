@@ -2,7 +2,7 @@ package com.arth.bot.adapter.sender.impl;
 
 import com.arth.bot.adapter.fetcher.EchoWaiter;
 import com.arth.bot.adapter.sender.Sender;
-import com.arth.bot.adapter.sender.action.ActionBuilder;
+import com.arth.bot.adapter.sender.action.SimpleActionBuilder;
 import com.arth.bot.adapter.session.SessionRegistry;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,7 +30,7 @@ import java.util.function.Function;
 public class OneBotSender implements Sender {
 
     private final SessionRegistry sessions;
-    private final ActionBuilder actionBuilder;
+    private final SimpleActionBuilder simpleActionBuilder;
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private final ConcurrentHashMap<String, CompletableFuture<JsonNode>> pending = new ConcurrentHashMap<>();
     private final EchoWaiter echoWaiter;
@@ -85,8 +85,8 @@ public class OneBotSender implements Sender {
                     if (files.size() == 1) {
                         String f = files.get(0);
                         json = payload.getGroupId() != null
-                                ? actionBuilder.buildGroupSendImageAction(payload.getGroupId(), f)
-                                : actionBuilder.buildPrivateSendImageAction(payload.getUserId(), f);
+                                ? simpleActionBuilder.buildGroupSendImageAction(payload.getGroupId(), f)
+                                : simpleActionBuilder.buildPrivateSendImageAction(payload.getUserId(), f);
                     } else {
                         json = payload.getGroupId() != null
                                 ? buildMultiImageSendJson("group", Map.of("group_id", payload.getGroupId()), files)
@@ -96,8 +96,8 @@ public class OneBotSender implements Sender {
                     String f = String.valueOf(image);
                     if (f == null || f.isBlank()) return;
                     json = payload.getGroupId() != null
-                            ? actionBuilder.buildGroupSendImageAction(payload.getGroupId(), f)
-                            : actionBuilder.buildPrivateSendImageAction(payload.getUserId(), f);
+                            ? simpleActionBuilder.buildGroupSendImageAction(payload.getGroupId(), f)
+                            : simpleActionBuilder.buildPrivateSendImageAction(payload.getUserId(), f);
                 }
 
                 log.debug("[adapter] sending image: {}", json);
@@ -122,8 +122,8 @@ public class OneBotSender implements Sender {
                     if (files.size() == 1) {
                         String f = files.get(0);
                         json = payload.getGroupId() != null
-                                ? actionBuilder.buildGroupResponseImageAction(payload.getGroupId(), payload.getMessageId(), f)
-                                : actionBuilder.buildPrivateResponseImageAction(payload.getUserId(), payload.getMessageId(), f);
+                                ? simpleActionBuilder.buildGroupReplyImageAction(payload.getGroupId(), payload.getMessageId(), f)
+                                : simpleActionBuilder.buildPrivateReplyImageAction(payload.getUserId(), payload.getMessageId(), f);
                     } else {
                         json = payload.getGroupId() != null
                                 ? buildMultiImageResponseJson("group", Map.of("group_id", payload.getGroupId()),
@@ -135,8 +135,8 @@ public class OneBotSender implements Sender {
                     String f = String.valueOf(image);
                     if (f == null || f.isBlank()) return;
                     json = payload.getGroupId() != null
-                            ? actionBuilder.buildGroupResponseImageAction(payload.getGroupId(), payload.getMessageId(), f)
-                            : actionBuilder.buildPrivateResponseImageAction(payload.getUserId(), payload.getMessageId(), f);
+                            ? simpleActionBuilder.buildGroupReplyImageAction(payload.getGroupId(), payload.getMessageId(), f)
+                            : simpleActionBuilder.buildPrivateReplyImageAction(payload.getUserId(), payload.getMessageId(), f);
                 }
 
                 log.debug("[adapter] responding image: {}", json);
@@ -161,18 +161,18 @@ public class OneBotSender implements Sender {
                     if (files.size() == 1) {
                         String f = files.get(0);
                         json = payload.getGroupId() != null
-                                ? actionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
-                                : actionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
+                                ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
+                                : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
                     } else {
                         String f = files.get(0);
                         json = payload.getGroupId() != null
-                                ? actionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
-                                : actionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
+                                ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
+                                : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
                         for (int i = 1; i < files.size(); i++) {
                             String remainingFile = files.get(i);
                             String remainingJson = payload.getGroupId() != null
-                                    ? actionBuilder.buildGroupSendVideoAction(payload.getGroupId(), remainingFile)
-                                    : actionBuilder.buildPrivateSendVideoAction(payload.getUserId(), remainingFile);
+                                    ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), remainingFile)
+                                    : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), remainingFile);
                             session.sendMessage(new TextMessage(remainingJson));
                         }
                     }
@@ -180,8 +180,8 @@ public class OneBotSender implements Sender {
                     String f = String.valueOf(video);
                     if (f == null || f.isBlank()) return;
                     json = payload.getGroupId() != null
-                            ? actionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
-                            : actionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
+                            ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
+                            : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
                 }
 
                 log.debug("[adapter] sending video: {}", json);
@@ -240,13 +240,13 @@ public class OneBotSender implements Sender {
 
         if (o instanceof String s) {
             json = payload.getGroupId() != null
-                    ? actionBuilder.buildGroupSendTextAction(payload.getGroupId(), s)
-                    : actionBuilder.buildPrivateSendTextAction(payload.getUserId(), s);
+                    ? simpleActionBuilder.buildGroupSendTextAction(payload.getGroupId(), s)
+                    : simpleActionBuilder.buildPrivateSendTextAction(payload.getUserId(), s);
         } else {
             String text = String.valueOf(o);
             json = payload.getGroupId() != null
-                    ? actionBuilder.buildGroupSendTextAction(payload.getGroupId(), text)
-                    : actionBuilder.buildPrivateSendTextAction(payload.getUserId(), text);
+                    ? simpleActionBuilder.buildGroupSendTextAction(payload.getGroupId(), text)
+                    : simpleActionBuilder.buildPrivateSendTextAction(payload.getUserId(), text);
         }
 
         log.debug("[adapter] sending message: {}", json);
@@ -259,13 +259,13 @@ public class OneBotSender implements Sender {
 
         if (o instanceof String s) {
             json = payload.getGroupId() != null
-                    ? actionBuilder.buildGroupResponseTextAction(payload.getGroupId(), payload.getMessageId(), s)
-                    : actionBuilder.buildPrivateResponseTextAction(payload.getUserId(), payload.getMessageId(), s);
+                    ? simpleActionBuilder.buildGroupReplyTextAction(payload.getGroupId(), payload.getMessageId(), s)
+                    : simpleActionBuilder.buildPrivateReplyTextAction(payload.getUserId(), payload.getMessageId(), s);
         } else {
             String text = String.valueOf(o);
             json = payload.getGroupId() != null
-                    ? actionBuilder.buildGroupResponseTextAction(payload.getGroupId(), payload.getMessageId(), text)
-                    : actionBuilder.buildPrivateResponseTextAction(payload.getUserId(), payload.getMessageId(), text);
+                    ? simpleActionBuilder.buildGroupReplyTextAction(payload.getGroupId(), payload.getMessageId(), text)
+                    : simpleActionBuilder.buildPrivateReplyTextAction(payload.getUserId(), payload.getMessageId(), text);
         }
 
         log.debug("[adapter] responding message: {}", json);

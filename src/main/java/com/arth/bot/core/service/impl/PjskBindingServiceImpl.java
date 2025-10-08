@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 /**
 * @author asheo
 * @description 针对表【t_pjsk_binding】的数据库操作Service实现
-* @createDate 2025-10-06 01:09:29
+* @createDate 2025-10-08 19:30:55
 */
 @Service
 public class PjskBindingServiceImpl extends ServiceImpl<PjskBindingMapper, PjskBinding>

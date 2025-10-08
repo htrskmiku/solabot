@@ -28,7 +28,7 @@ public class PjskBinding {
     /**
      * 
      */
-    private Long qqNumber;
+    private Long userId;
 
     /**
      * 
@@ -64,7 +64,7 @@ public class PjskBinding {
         PjskBinding other = (PjskBinding) that;
         return (this.getId() == null ? other.getId() == null : this.getId().equals(other.getId()))
             && (this.getPjskId() == null ? other.getPjskId() == null : this.getPjskId().equals(other.getPjskId()))
-            && (this.getQqNumber() == null ? other.getQqNumber() == null : this.getQqNumber().equals(other.getQqNumber()))
+            && (this.getUserId() == null ? other.getUserId() == null : this.getUserId().equals(other.getUserId()))
             && (this.getGroupId() == null ? other.getGroupId() == null : this.getGroupId().equals(other.getGroupId()))
             && (this.getServerRegion() == null ? other.getServerRegion() == null : this.getServerRegion().equals(other.getServerRegion()))
             && (this.getCreatedAt() == null ? other.getCreatedAt() == null : this.getCreatedAt().equals(other.getCreatedAt()))
@@ -77,7 +77,7 @@ public class PjskBinding {
         int result = 1;
         result = prime * result + ((getId() == null) ? 0 : getId().hashCode());
         result = prime * result + ((getPjskId() == null) ? 0 : getPjskId().hashCode());
-        result = prime * result + ((getQqNumber() == null) ? 0 : getQqNumber().hashCode());
+        result = prime * result + ((getUserId() == null) ? 0 : getUserId().hashCode());
         result = prime * result + ((getGroupId() == null) ? 0 : getGroupId().hashCode());
         result = prime * result + ((getServerRegion() == null) ? 0 : getServerRegion().hashCode());
         result = prime * result + ((getCreatedAt() == null) ? 0 : getCreatedAt().hashCode());
@@ -93,7 +93,7 @@ public class PjskBinding {
         sb.append("Hash = ").append(hashCode());
         sb.append(", id=").append(id);
         sb.append(", pjskId=").append(pjskId);
-        sb.append(", qqNumber=").append(qqNumber);
+        sb.append(", userId=").append(userId);
         sb.append(", groupId=").append(groupId);
         sb.append(", serverRegion=").append(serverRegion);
         sb.append(", createdAt=").append(createdAt);

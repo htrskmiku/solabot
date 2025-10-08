@@ -1,7 +1,12 @@
 package com.arth.bot.plugins;
 
 import com.arth.bot.adapter.sender.Sender;
+import com.arth.bot.adapter.sender.action.ActionChainBuilder;
+import com.arth.bot.core.authorization.annotation.DirectAuthInterceptor;
+import com.arth.bot.core.authorization.model.AuthMode;
+import com.arth.bot.core.authorization.model.AuthScope;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
+import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.domain.PjskBinding;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
@@ -11,6 +16,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
@@ -20,7 +32,11 @@ import java.util.List;
 public class Pjsk {
 
     private final Sender sender;
+    private final ActionChainBuilder actionChainBuilder;
     private final PjskBindingMapper pjskBindingMapper;
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm:ss")
+            .withZone(ZoneId.of("Asia/Shanghai"));
 
     @Value("${server.port}")
     private String port;
@@ -39,24 +55,19 @@ public class Pjsk {
             return;
         }
 
-        long qqId = payload.getUserId();
+        long userId = payload.getUserId();
         Long groupId = payload.getGroupId();
         String pjskId = args.get(0);
 
         // 1. 查询
-        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<PjskBinding>()
-                .eq(PjskBinding::getPjskId, pjskId)
-                .eq(PjskBinding::getQqNumber, qqId)
-                .eq(PjskBinding::getGroupId, groupId);
-
-        PjskBinding binding = pjskBindingMapper.selectOne(queryWrapper);
+        PjskBinding binding = pjskBindingMapper.selectOne(queryBinding(userId, groupId));
 
         // 2. 插入或更新
         if (binding == null) {
             // 不存在记录，插入
             PjskBinding newBinding = new PjskBinding();
             newBinding.setPjskId(pjskId);
-            newBinding.setQqNumber(qqId);
+            newBinding.setUserId(userId);
             newBinding.setGroupId(groupId);
             newBinding.setServerRegion("xx");
             newBinding.setCreatedAt(new Date());
@@ -65,6 +76,7 @@ public class Pjsk {
             sender.sendText(payload, "bind successfully!");
         } else {
             // 存在记录，更新
+            binding.setPjskId(pjskId);
             binding.setServerRegion("xx");
             binding.setUpdatedAt(new Date());
             pjskBindingMapper.updateById(binding);
@@ -74,11 +86,9 @@ public class Pjsk {
 
     @BotCommand({"查询绑定"})
     public void bound(ParsedPayloadDTO payload) {
-        long qqId = payload.getUserId();
+        long userId = payload.getUserId();
         Long groupId = payload.getGroupId();
-        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PjskBinding::getQqNumber, qqId).eq(PjskBinding::getGroupId, groupId);;
-        PjskBinding binding = pjskBindingMapper.selectOne(queryWrapper);
+        PjskBinding binding = pjskBindingMapper.selectOne(queryBinding(userId, groupId));
         if (binding == null) {
             sender.responseText(payload, "you haven't bound any pjsk id yet");
         } else {
@@ -87,11 +97,9 @@ public class Pjsk {
     }
 
     public void msm(ParsedPayloadDTO payload) {
-        long qqId = payload.getUserId();
+        long userId = payload.getUserId();
         Long groupId = payload.getGroupId();
-        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PjskBinding::getQqNumber, qqId).eq(PjskBinding::getGroupId, groupId);;
-        PjskBinding binding = pjskBindingMapper.selectOne(queryWrapper);
+        PjskBinding binding = pjskBindingMapper.selectOne(queryBinding(userId, groupId));
 
         if (binding == null) {
             sender.responseText(payload, "数据库中没有查询到你绑定的 pjsk 账号哦");
@@ -99,9 +107,83 @@ public class Pjsk {
         }
 
         String pjskId = binding.getPjskId();
+        String region = binding.getServerRegion();
+
+        Path file = Path.of(System.getProperty("user.dir") + "/dynamic/pjsk_user_data/mysekai/draw/map/" + "cn" + "_" + pjskId + ".png");
+        String updatedTime = null;
+
+        if (!Files.exists(file)) {
+            sender.responseText(payload, "服务器上没有找到你的 MySekai 数据，可能是抓包未成功，小概率服务器解析失败，需要根据日志分析");
+            return;
+        } else {
+            try {
+                FileTime timestamp = Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime();
+                updatedTime = dateTimeFormatter.format(timestamp.toInstant());
+            } catch (IOException e) {
+                sender.responseText(payload, "MySekai 数据存在，但获取更新日期失败: IOException");
+                throw new InternalServerErrorException("IOException: " + e.getCause().getMessage(), "MySekai 数据存在，但获取更新日期失败: IOException");
+            }
+        }
+
         String overviewImgUrl = "http://" + clientAccessUrl + ":" + port + "/resource/cn/mysekai/" + pjskId + "/overview";
-        System.out.println(overviewImgUrl);
         String mapImgUrl = "http://" + clientAccessUrl + ":" + port + "/resource/cn/mysekai/" + pjskId + "/map";
-        sender.responseImage(payload, List.of(overviewImgUrl, mapImgUrl));
+
+        ActionChainBuilder builder = actionChainBuilder.create().setReplay(payload.getMessageId())
+                .text("MySekai 数据更新于" + updatedTime)
+                .image(overviewImgUrl)
+                .image(mapImgUrl);
+
+        String json = payload.getMessageType().equals("group") ? builder.toGroupJson(payload.getGroupId()) : builder.toPrivateJson(payload.getUserId());
+
+        sender.pushActionJSON(payload.getSelfId(), json);
+    }
+
+    @BotCommand({"初始化"})
+    @DirectAuthInterceptor(
+            scope = AuthScope.USER,
+            mode  = AuthMode.ALLOW,
+            targets = "1093664084"
+    )
+    public void initUserBinding(ParsedPayloadDTO payload) {
+        PjskBinding a = new PjskBinding();
+        a.setPjskId("7485938033569569588");
+        a.setUserId(1256977415L);
+        a.setGroupId(619096416L);
+        a.setServerRegion("xx");
+        a.setCreatedAt(new Date());
+        a.setUpdatedAt(new Date());
+        pjskBindingMapper.insert(a);
+
+        PjskBinding b = new PjskBinding();
+        b.setPjskId("7445096955522390818");
+        b.setUserId(1685280357L);
+        b.setGroupId(619096416L);
+        b.setServerRegion("xx");
+        b.setCreatedAt(new Date());
+        b.setUpdatedAt(new Date());
+        pjskBindingMapper.insert(b);
+
+        // 测试用
+        PjskBinding c = new PjskBinding();
+        c.setPjskId("123");
+        c.setUserId(1093664084L);
+        c.setGroupId(793709714L);
+        c.setServerRegion("xx");
+        c.setCreatedAt(new Date());
+        c.setUpdatedAt(new Date());
+        pjskBindingMapper.insert(c);
+
+        sender.responseText(payload, "database init successfully");
+    }
+
+    private LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId) {
+        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(PjskBinding::getUserId, userId).eq(PjskBinding::getServerRegion, "xx");
+        if (groupId == null) {
+            queryWrapper.isNull(PjskBinding::getGroupId);
+        } else {
+            queryWrapper.eq(PjskBinding::getGroupId, groupId);
+        }
+        return queryWrapper;
     }
 }
