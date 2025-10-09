@@ -52,8 +52,10 @@ public class Help {
                         模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块替换为我们的"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         img 图片处理模块目前支持以下命令：
-                          - mid 镜像翻转
-                          - gray 转灰度图"""))
+                          - mid 镜像对称，默认左对称
+                          - mid r 镜像对称，右对称
+                          - gray 转灰度图
+                          - mirror 水平镜像翻转"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         test 测试模块目前支持以下命令：
                           - quanxian: 测试鉴权切面，硬编码仅允许 1093664084

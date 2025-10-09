@@ -21,14 +21,6 @@ public class CacheImageService {
 
     private final RedisTemplate<String, byte[]> redisTemplate;
 
-    @Value("${server.port}")
-    private String port;
-
-    @Value("${app.client-access-url}")
-    private String clientAccessUrl;
-
-    private final String baseUrl = "http://" + clientAccessUrl + ":" + port;
-
     private static final Duration TTL = Duration.ofMinutes(3);
 
     /**

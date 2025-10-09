@@ -12,6 +12,7 @@ import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import com.arth.bot.core.database.mapper.PjskBindingMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -44,7 +45,12 @@ public class Pjsk {
     @Value("${app.client-access-url}")
     private String clientAccessUrl;
 
-    private final String baseUrl = "http://" + clientAccessUrl + ":" + port;
+    private String baseUrl;
+
+    @PostConstruct
+    public void init() {
+        this.baseUrl = "http://" + clientAccessUrl + ":" + port;
+    }
 
     public void index(ParsedPayloadDTO payload) {
         sender.replyText(payload, "请接 pjsk 模块的具体命令哦");
