@@ -52,7 +52,8 @@ public class Img {
                             n 可以为负数，表示倒放
                           - gray: 转灰度图
                           - mirror: 水平镜像翻转
-                          - gif: 转gif（QQ里看起来更像表情包）
+                          - gif: 转gif
+                            QQ里看起来更像表情包
                           - png: 转png""";
 
     @PostConstruct
@@ -134,12 +135,17 @@ public class Img {
         if (arg.endsWith("x")) arg = arg.substring(0, arg.length() - 1);
 
         double rate;
-        try { rate = Double.parseDouble(arg); }
+        try {
+            rate = Double.parseDouble(arg);
+        }
         catch (NumberFormatException e) {
             sender.replyText(payload, "倍率参数不合法");
             return;
         }
-        if (rate == 0) { sender.replyText(payload, "倍率不能为 0"); return; }
+        if (rate == 0) {
+            sender.replyText(payload, "倍率不能为 0");
+            return;
+        }
 
         boolean reverse = rate < 0;
         double r = Math.abs(rate);
@@ -147,25 +153,24 @@ public class Img {
         List<String> urls = imgExtractor.extractImgUrls(payload, true);
         if (urls == null || urls.isEmpty()) return;
 
-        List<String> outUrls = new ArrayList<>();
+        List<String> cacheUrls = new ArrayList<>();
 
         for (String url : urls) {
-            if (!url.toLowerCase(Locale.ROOT).contains(".gif")) continue;
-
             byte[] inBytes = imgExtractor.getBytes(url);
             if (inBytes == null || inBytes.length == 0) continue;
 
-            GifData src = readGif(new ByteArrayInputStream(inBytes));
+            // GifData src = readGif(new ByteArrayInputStream(inBytes));
+            GifData src = readGifFlattened(new ByteArrayInputStream(inBytes));
             if (src.frames.isEmpty()) continue;
 
             GifData out = retime(src, r, reverse);
             byte[] outBytes = writeGifToBytes(out.frames, out.delaysCs, out.loopCount);
 
             String uuid = cacheImageService.cacheImage(outBytes);
-            outUrls.add(baseUrl + "/cache/resource/imgs/gif/" + uuid);
+            cacheUrls.add(baseUrl + "/cache/resource/imgs/gif/" + uuid);
         }
 
-        if (!outUrls.isEmpty()) sender.sendImage(payload, outUrls);
+        if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
     public void mirror(ParsedPayloadDTO payload) throws IOException {
@@ -235,28 +240,161 @@ public class Img {
         int loopCount = 0;
     }
 
-    private static GifData readGif(InputStream input) throws IOException {
+//    private static GifData readGif(InputStream input) throws IOException {
+//        GifData g = new GifData();
+//        try (ImageInputStream in = ImageIO.createImageInputStream(input)) {
+//            Iterator<ImageReader> readers = ImageIO.getImageReadersByFormatName("gif");
+//            if (!readers.hasNext()) throw new IOException("No GIF reader");
+//            ImageReader reader = readers.next();
+//            reader.setInput(in, false);
+//
+//            int num = reader.getNumImages(true);
+//            for (int i = 0; i < num; i++) {
+//                g.frames.add(reader.read(i));
+//                IIOMetadata meta = reader.getImageMetadata(i);
+//                g.delaysCs.add(readDelayCs(meta));
+//                if (i == 0) g.loopCount = readLoopCount(meta);
+//            }
+//            reader.dispose();
+//        }
+//
+//        for (int i = 0; i < g.delaysCs.size(); i++) {
+//            if (g.delaysCs.get(i) <= 0) g.delaysCs.set(i, 10);
+//        }
+//        return g;
+//    }
+
+    private static GifData readGifFlattened(InputStream input) throws IOException {
         GifData g = new GifData();
         try (ImageInputStream in = ImageIO.createImageInputStream(input)) {
             Iterator<ImageReader> readers = ImageIO.getImageReadersByFormatName("gif");
             if (!readers.hasNext()) throw new IOException("No GIF reader");
             ImageReader reader = readers.next();
             reader.setInput(in, false);
-
             int num = reader.getNumImages(true);
-            for (int i = 0; i < num; i++) {
-                g.frames.add(reader.read(i));
-                IIOMetadata meta = reader.getImageMetadata(i);
-                g.delaysCs.add(readDelayCs(meta));
-                if (i == 0) g.loopCount = readLoopCount(meta);
+            if (num <= 0) {
+                reader.dispose();
+                return g;
             }
+            // ----------- 1) 取画布尺寸：先 stream metadata 的 LSD，兜底遍历帧，再兜底第0帧尺寸 -----------
+            int canvasW = 0, canvasH = 0;
+            IIOMetadata streamMeta = reader.getStreamMetadata();
+            if (streamMeta != null) {
+                try {
+                    String sfmt = streamMeta.getNativeMetadataFormatName();
+                    if (sfmt != null) {
+                        IIOMetadataNode sroot = (IIOMetadataNode) streamMeta.getAsTree(sfmt);
+                        IIOMetadataNode lsd = findNode(sroot, "LogicalScreenDescriptor");
+                        if (lsd != null) {
+                            canvasW = parseIntSafe(lsd, "logicalScreenWidth", 0);
+                            canvasH = parseIntSafe(lsd, "logicalScreenHeight", 0);
+                        }
+                    }
+                } catch (Exception ignore) {}
+            }
+            if (canvasW <= 0 || canvasH <= 0) {
+                // 遍历每帧，基于 ImageDescriptor 的 (x,y,w,h) 求最大包围盒
+                for (int i = 0; i < num; i++) {
+                    try {
+                        IIOMetadata im = reader.getImageMetadata(i);
+                        String ifmt = im.getNativeMetadataFormatName();
+                        IIOMetadataNode iroot = (IIOMetadataNode) im.getAsTree(ifmt);
+                        IIOMetadataNode imgDesc = findNode(iroot, "ImageDescriptor");
+                        int fx = 0, fy = 0, fw, fh;
+                        if (imgDesc != null) {
+                            fx = parseIntSafe(imgDesc, "imageLeftPosition", 0);
+                            fy = parseIntSafe(imgDesc, "imageTopPosition", 0);
+                            fw = parseIntSafe(imgDesc, "imageWidth", reader.getWidth(i));
+                            fh = parseIntSafe(imgDesc, "imageHeight", reader.getHeight(i));
+                        } else {
+                            // 有些实现没有 ImageDescriptor，就退回帧图尺寸
+                            fw = reader.getWidth(i);
+                            fh = reader.getHeight(i);
+                        }
+                        canvasW = Math.max(canvasW, fx + fw);
+                        canvasH = Math.max(canvasH, fy + fh);
+                    } catch (Exception e) {
+                        // continue
+                    }
+                }
+            }
+            if (canvasW <= 0) canvasW = reader.getWidth(0);
+            if (canvasH <= 0) canvasH = reader.getHeight(0);
+            // ----------- 2) 准备工作画布 -----------
+            BufferedImage work = new BufferedImage(canvasW, canvasH, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D wg = work.createGraphics();
+            wg.setComposite(AlphaComposite.SrcOver);
+            // ----------- 3) 帧循环：按处置规则拍平为“独立全画布帧” -----------
+            for (int i = 0; i < num; i++) {
+                BufferedImage raw = reader.read(i);
+                IIOMetadata im = reader.getImageMetadata(i);
+                String ifmt = im.getNativeMetadataFormatName();
+                IIOMetadataNode iroot = (IIOMetadataNode) im.getAsTree(ifmt);
+                // 读取帧矩形
+                IIOMetadataNode imgDesc = findNode(iroot, "ImageDescriptor");
+                int fx = (imgDesc != null) ? parseIntSafe(imgDesc, "imageLeftPosition", 0) : 0;
+                int fy = (imgDesc != null) ? parseIntSafe(imgDesc, "imageTopPosition", 0) : 0;
+                int fw = (imgDesc != null) ? parseIntSafe(imgDesc, "imageWidth", raw.getWidth()) : raw.getWidth();
+                int fh = (imgDesc != null) ? parseIntSafe(imgDesc, "imageHeight", raw.getHeight()) : raw.getHeight();
+                // 读取处置
+                IIOMetadataNode gce = findNode(iroot, "GraphicControlExtension");
+                String disposal = (gce != null) ? gce.getAttribute("disposalMethod") : "none";
+                if (disposal == null || disposal.isEmpty()) disposal = "none";
+                // 在绘制当前帧之前保存快照（仅当本帧的处置是 restoreToPrevious 时需要）
+                BufferedImage prevSnapshot = null;
+                if ("restoreToPrevious".equals(disposal)) {
+                    prevSnapshot = deepCopy(work);
+                }
+                // 把当前帧绘制到工作画布 (fx, fy)
+                wg.drawImage(raw, fx, fy, null);
+                // 生成独立全画布帧快照
+                g.frames.add(deepCopy(work));
+                // 记录延时和循环
+                int delayCs = readDelayCs(im);
+                g.delaysCs.add(delayCs > 0 ? delayCs : 10);
+                if (i == 0) g.loopCount = readLoopCount(im);
+                // 根据处置法处理工作画布
+                if ("restoreToBackgroundColor".equals(disposal)) {
+                    clearRectTransparent(work, fx, fy, fw, fh);
+                } else if ("restoreToPrevious".equals(disposal) && prevSnapshot != null) {
+                    Graphics2D g2 = work.createGraphics();
+                    g2.setComposite(AlphaComposite.Src);
+                    g2.drawImage(prevSnapshot, 0, 0, null);
+                    g2.dispose();
+                }
+                // nothing to do for case none
+            }
+            wg.dispose();
             reader.dispose();
         }
-
-        for (int i = 0; i < g.delaysCs.size(); i++) {
-            if (g.delaysCs.get(i) <= 0) g.delaysCs.set(i, 10);
-        }
         return g;
+    }
+
+    private static int parseIntSafe(IIOMetadataNode n, String attr, int defVal) {
+        if (n == null) return defVal;
+        try {
+            String v = n.getAttribute(attr);
+            if (v == null || v.isEmpty()) return defVal;
+            return Integer.parseInt(v);
+        } catch (Exception e) {
+            return defVal;
+        }
+    }
+
+    private static BufferedImage deepCopy(BufferedImage src) {
+        BufferedImage dst = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = dst.createGraphics();
+        g2.setComposite(AlphaComposite.Src);
+        g2.drawImage(src, 0, 0, null);
+        g2.dispose();
+        return dst;
+    }
+
+    private static void clearRectTransparent(BufferedImage img, int x, int y, int w, int h) {
+        Graphics2D g2 = img.createGraphics();
+        g2.setComposite(AlphaComposite.Clear);
+        g2.fillRect(x, y, w, h);
+        g2.dispose();
     }
 
     private static int readDelayCs(IIOMetadata metadata) {

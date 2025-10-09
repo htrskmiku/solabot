@@ -2,6 +2,7 @@ package com.arth.bot.core.common.dto;
 
 import com.arth.bot.core.common.dto.replay.AudioRef;
 import com.arth.bot.core.common.dto.replay.ImageRef;
+import com.arth.bot.core.common.dto.replay.MfaceRef;
 import com.arth.bot.core.common.dto.replay.VideoRef;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,15 +32,21 @@ public class ReplayedMessagePayloadDTO {
     private List<ImageRef> images = new ArrayList<>();
 
     @Builder.Default
+    private List<MfaceRef> mfaces = new ArrayList<>();
+
+    @Builder.Default
     private List<AudioRef> audios = new ArrayList<>();
 
     @Builder.Default
     private List<VideoRef> videos = new ArrayList<>();
 
     // 元信息
-    private Long msgId;
+    private Long messageId;
+
     private Long userId;
+
     private Long groupId;
+
     private Long timeEpochSec;
 
     public void addText(String s) {
@@ -48,6 +55,10 @@ public class ReplayedMessagePayloadDTO {
 
     public void addImage(ImageRef r) {
         if (r != null) images.add(r);
+    }
+
+    public void addMface(MfaceRef r) {
+        if (r != null) mfaces.add(r);
     }
 
     public void addAudio(AudioRef r) {
@@ -60,6 +71,10 @@ public class ReplayedMessagePayloadDTO {
 
     public void addAllImages(Collection<ImageRef> cs) {
         if (cs != null) images.addAll(cs);
+    }
+
+    public void addAllMfaces(Collection<MfaceRef> cs) {
+        if (cs != null) mfaces.addAll(cs);
     }
 
     public void addAllAudios(Collection<AudioRef> cs) {

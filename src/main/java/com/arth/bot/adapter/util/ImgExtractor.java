@@ -5,6 +5,7 @@ import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
 import com.arth.bot.core.common.dto.replay.ImageRef;
+import com.arth.bot.core.common.dto.replay.MfaceRef;
 import com.arth.bot.core.common.exception.InvalidCommandArgsException;
 import lombok.RequiredArgsConstructor;
 
@@ -19,6 +20,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 @Component
 @RequiredArgsConstructor
@@ -131,20 +133,32 @@ public class ImgExtractor {
             if (printPrompt) sender.replyText(payload, "获取引用消息失败：" + e.getMessage());
             return List.of();
         }
-        if (r == null || r.getImages() == null || r.getImages().isEmpty()) {
-            if (printPrompt) sender.sendText(payload, "引用的消息里没有图片（或实现未返回图片段）");
+        if ((r == null) || (r.getImages().isEmpty() && r.getMfaces().isEmpty())) {
+            if (printPrompt) sender.sendText(payload, "引用的消息里没有找到图片或表情包");
             return List.of();
         }
 
-        List<String> urls = r.getImages().stream()
+        // 提取图片 URL
+        List<String> imgUrls = r.getImages().stream()
                 .map(ImageRef::getSource)
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
 
+        // 提取表情包 URL
+        List<String> mfaceUrls = r.getMfaces().stream()
+                .map(MfaceRef::getUrl)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+
+        // 合并
+        List<String> urls = Stream.concat(imgUrls.stream(), mfaceUrls.stream()).toList();
+
         if (urls.isEmpty()) {
-            if (printPrompt) sender.sendText(payload, "引用的图片缺少可用的 url/file 字段");
+            if (printPrompt) sender.sendText(payload, "引用的图片或表情包缺少可用的 url/file 字段");
             return List.of();
         }
 

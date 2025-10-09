@@ -2,10 +2,7 @@ package com.arth.bot.adapter.parser.impl;
 
 import com.arth.bot.adapter.parser.PayloadParser;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
-import com.arth.bot.core.common.dto.message.AtSegment;
-import com.arth.bot.core.common.dto.message.ImageSegment;
-import com.arth.bot.core.common.dto.message.MessageSegment;
-import com.arth.bot.core.common.dto.message.TextSegment;
+import com.arth.bot.core.common.dto.message.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Service;
 
@@ -54,6 +51,14 @@ public class OneBotPayloadParser implements PayloadParser {
                     }
                     case "image" -> {
                         ImageSegment seg = new ImageSegment();
+                        String url = data.hasNonNull("url")
+                                ? data.get("url").asText("")
+                                : data.path("file").asText("");
+                        seg.setData(Map.of("url", url));
+                        segments.add(seg);
+                    }
+                    case "mface" -> {
+                        MfaceSegment seg = new MfaceSegment();
                         String url = data.hasNonNull("url")
                                 ? data.get("url").asText("")
                                 : data.path("file").asText("");

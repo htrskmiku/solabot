@@ -4,10 +4,7 @@ import com.arth.bot.adapter.fetcher.ReplyFetcher;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.util.CQHelper;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
-import com.arth.bot.core.common.dto.replay.AudioRef;
-import com.arth.bot.core.common.dto.replay.ImageRef;
-import com.arth.bot.core.common.dto.replay.MediaSourceType;
-import com.arth.bot.core.common.dto.replay.VideoRef;
+import com.arth.bot.core.common.dto.replay.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -31,7 +28,7 @@ public class OneBotReplyFetcher implements ReplyFetcher {
         JsonNode data = resp.path("data");
 
         ReplayedMessagePayloadDTO dto = new ReplayedMessagePayloadDTO();
-        dto.setMsgId(data.path("message_id").asLong(0));
+        dto.setMessageId(data.path("message_id").asLong(0));
         dto.setUserId(data.path("user_id").asLong(0));
         dto.setGroupId(data.path("group_id").asLong(0));
         dto.setTimeEpochSec(data.path("time").asLong(0));
@@ -45,6 +42,7 @@ public class OneBotReplyFetcher implements ReplyFetcher {
                 switch (type) {
                     case "text"  -> dto.addText(d.path("text").asText(""));
                     case "image" -> dto.addImage(SegmentMappers.toImageRef(d));
+                    case "mface" -> dto.addMface(SegmentMappers.toMfaceRef(d));
                     case "record"-> dto.addAudio(SegmentMappers.toAudioRef(d));
                     case "video" -> dto.addVideo(SegmentMappers.toVideoRef(d));
                 }
@@ -57,6 +55,7 @@ public class OneBotReplyFetcher implements ReplyFetcher {
 
     // 段映射
     static final class SegmentMappers {
+
         static ImageRef toImageRef(JsonNode d) {
             String url = textOrNull(d,"url");
             String file= textOrNull(d,"file");
@@ -70,6 +69,16 @@ public class OneBotReplyFetcher implements ReplyFetcher {
             if (d.has("height")) r.setHeight(d.path("height").asInt());
             return r;
         }
+
+        static MfaceRef toMfaceRef(JsonNode d) {
+            MfaceRef r = new MfaceRef();
+            r.setUrl(textOrNull(d, "url"));
+            r.setEmojiPackageId(textOrNull(d, "emoji_package_id"));
+            r.setEmojiId(textOrNull(d, "emoji_id"));
+            r.setKey(textOrNull(d, "key"));
+            return r;
+        }
+
         static AudioRef toAudioRef(JsonNode d) {
             String url = textOrNull(d,"url");
             String file= textOrNull(d,"file");
@@ -81,6 +90,7 @@ public class OneBotReplyFetcher implements ReplyFetcher {
             if (d.has("duration")) r.setDurationSec(d.path("duration").asInt());
             return r;
         }
+
         static VideoRef toVideoRef(JsonNode d) {
             String url = textOrNull(d,"url");
             String file= textOrNull(d,"file");
@@ -92,9 +102,14 @@ public class OneBotReplyFetcher implements ReplyFetcher {
             if (d.has("duration")) r.setDurationSec(d.path("duration").asInt());
             return r;
         }
+
         private static String textOrNull(JsonNode d, String k){
-            String v = d.path(k).asText(null); return (v!=null && !v.isBlank())?v:null;
+            String v = d.path(k).asText(null);
+            return (v!=null && !v.isBlank())?v:null;
         }
-        private static boolean notBlank(String s){ return s!=null && !s.isBlank(); }
+
+        private static boolean notBlank(String s){
+            return s!=null && !s.isBlank();
+        }
     }
 }
