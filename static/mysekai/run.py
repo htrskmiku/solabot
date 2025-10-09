@@ -9,10 +9,10 @@ from config import MYSEKAI_RAW_DIR, MYSEKAI_PARSED_DIR, MYSEKAI_DRAW_MAP_DIR, MY
 
 os.environ["PJ_RES_DIR"] = os.path.join(
     os.path.dirname(__file__),
-    "pjsk_mysekai_xray_prototype"
+    "pjsk_mysekai_prototype"
 )
 
-from pjsk_mysekai_xray_prototype.draw_xray import render_and_save
+from pjsk_mysekai_prototype.draw import render_and_save
 
 
 os.makedirs(MYSEKAI_RAW_DIR, exist_ok=True)

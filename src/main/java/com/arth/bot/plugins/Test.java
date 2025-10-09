@@ -10,11 +10,7 @@ import com.arth.bot.core.authorization.model.AuthScope;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
 import com.arth.bot.core.common.dto.replay.ImageRef;
-import com.arth.bot.core.common.dto.replay.MediaSourceType;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -76,7 +72,7 @@ public class Test {
      * @param payload
      */
     public void huifu(ParsedPayloadDTO payload) {
-        sender.responseText(payload, "test");
+        sender.replyText(payload, "test");
     }
 
     /**
@@ -84,7 +80,7 @@ public class Test {
      */
     public void tu(ParsedPayloadDTO payload) {
         String url = "http://" + clientAccessUrl + ":" + port + "/saki.jpg";
-        sender.responseImage(payload, List.of(url, url, url));
+        sender.replyImage(payload, List.of(url, url, url));
     }
 
     /**
@@ -146,7 +142,7 @@ public class Test {
             return;
         }
 
-        sender.responseImage(payload, files);
+        sender.replyImage(payload, files);
     }
 
     /**
@@ -154,6 +150,6 @@ public class Test {
      * @param payload
      */
     public void canshu(ParsedPayloadDTO payload, List<String> args) {
-        sender.responseText(payload, args.toString());
+        sender.replyText(payload, args.toString());
     }
 }

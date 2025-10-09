@@ -69,7 +69,7 @@ public class BusinessExceptionHandlerAspect {
         if (description == null || description.isBlank()) return;
 
         if ("message".equalsIgnoreCase(behaviour)) {
-            sender.responseText(payload, description);
+            sender.replyText(payload, description);
         } else {
             log.info("[core: business exception] {}", description);
         }

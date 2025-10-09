@@ -7,10 +7,10 @@ import com.arth.bot.core.authorization.model.AuthMode;
 import com.arth.bot.core.authorization.model.AuthScope;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
-import com.arth.bot.core.domain.PjskBinding;
+import com.arth.bot.core.database.domain.PjskBinding;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
-import com.arth.bot.core.mapper.PjskBindingMapper;
+import com.arth.bot.core.database.mapper.PjskBindingMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,8 +44,10 @@ public class Pjsk {
     @Value("${app.client-access-url}")
     private String clientAccessUrl;
 
+    private final String baseUrl = "http://" + clientAccessUrl + ":" + port;
+
     public void index(ParsedPayloadDTO payload) {
-        sender.responseText(payload, "请接 pjsk 模块的具体命令哦");
+        sender.replyText(payload, "请接 pjsk 模块的具体命令哦");
     }
 
     @BotCommand({"绑定"})
@@ -90,9 +92,9 @@ public class Pjsk {
         Long groupId = payload.getGroupId();
         PjskBinding binding = pjskBindingMapper.selectOne(queryBinding(userId, groupId));
         if (binding == null) {
-            sender.responseText(payload, "you haven't bound any pjsk id yet");
+            sender.replyText(payload, "you haven't bound any pjsk id yet");
         } else {
-            sender.responseText(payload, "your pjsk id is " + binding.getPjskId());
+            sender.replyText(payload, "your pjsk id is " + binding.getPjskId());
         }
     }
 
@@ -102,7 +104,7 @@ public class Pjsk {
         PjskBinding binding = pjskBindingMapper.selectOne(queryBinding(userId, groupId));
 
         if (binding == null) {
-            sender.responseText(payload, "数据库中没有查询到你绑定的 pjsk 账号哦");
+            sender.replyText(payload, "数据库中没有查询到你绑定的 pjsk 账号哦");
             return;
         }
 
@@ -113,20 +115,20 @@ public class Pjsk {
         String updatedTime = null;
 
         if (!Files.exists(file)) {
-            sender.responseText(payload, "服务器上没有找到你的 MySekai 数据，可能是抓包未成功，小概率服务器解析失败，需要根据日志分析");
+            sender.replyText(payload, "服务器上没有找到你的 MySekai 数据，可能是抓包未成功，小概率服务器解析失败，需要根据日志分析");
             return;
         } else {
             try {
                 FileTime timestamp = Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime();
                 updatedTime = dateTimeFormatter.format(timestamp.toInstant());
             } catch (IOException e) {
-                sender.responseText(payload, "MySekai 数据存在，但获取更新日期失败: IOException");
+                sender.replyText(payload, "MySekai 数据存在，但获取更新日期失败: IOException");
                 throw new InternalServerErrorException("IOException: " + e.getCause().getMessage(), "MySekai 数据存在，但获取更新日期失败: IOException");
             }
         }
 
-        String overviewImgUrl = "http://" + clientAccessUrl + ":" + port + "/resource/cn/mysekai/" + pjskId + "/overview";
-        String mapImgUrl = "http://" + clientAccessUrl + ":" + port + "/resource/cn/mysekai/" + pjskId + "/map";
+        String overviewImgUrl = baseUrl + "/pjsk/resource/cn/mysekai/" + pjskId + "/overview";
+        String mapImgUrl = baseUrl + "/pjsk/resource/cn/mysekai/" + pjskId + "/map";
 
         ActionChainBuilder builder = actionChainBuilder.create().setReplay(payload.getMessageId())
                 .text("MySekai 数据更新于" + updatedTime)
@@ -152,7 +154,11 @@ public class Pjsk {
         a.setServerRegion("xx");
         a.setCreatedAt(new Date());
         a.setUpdatedAt(new Date());
-        pjskBindingMapper.insert(a);
+        try {
+            pjskBindingMapper.insert(a);
+        } catch (Exception ignored) {
+
+        }
 
         PjskBinding b = new PjskBinding();
         b.setPjskId("7445096955522390818");
@@ -161,19 +167,40 @@ public class Pjsk {
         b.setServerRegion("xx");
         b.setCreatedAt(new Date());
         b.setUpdatedAt(new Date());
-        pjskBindingMapper.insert(b);
+        try {
+            pjskBindingMapper.insert(b);
+        } catch (Exception ignored) {
 
-        // 测试用
+        }
+
         PjskBinding c = new PjskBinding();
-        c.setPjskId("123");
-        c.setUserId(1093664084L);
+        c.setPjskId("7487212719486049063");
+        c.setUserId(1828209434L);
         c.setGroupId(793709714L);
         c.setServerRegion("xx");
         c.setCreatedAt(new Date());
         c.setUpdatedAt(new Date());
-        pjskBindingMapper.insert(c);
+        try {
+            pjskBindingMapper.insert(c);
+        } catch (Exception ignored) {
 
-        sender.responseText(payload, "database init successfully");
+        }
+
+        // 测试用
+        PjskBinding d = new PjskBinding();
+        d.setPjskId("123");
+        d.setUserId(1093664084L);
+        d.setGroupId(793709714L);
+        d.setServerRegion("xx");
+        d.setCreatedAt(new Date());
+        d.setUpdatedAt(new Date());
+        try {
+            pjskBindingMapper.insert(d);
+        } catch (Exception ignored) {
+
+        }
+
+        sender.replyText(payload, "database init successfully");
     }
 
     private LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId) {

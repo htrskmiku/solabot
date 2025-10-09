@@ -25,7 +25,7 @@ public class ImgExtractor {
     private final Sender sender;
     private final ReplyFetcher replyFetcher;
 
-    public List<BufferedImage> getImgs(List<String> urls) {
+    public List<BufferedImage> getBufferedImgs(List<String> urls) {
         List<BufferedImage> imgs = new ArrayList<>();
 
         try {
@@ -52,7 +52,7 @@ public class ImgExtractor {
     public List<String> extractImgUrls(ParsedPayloadDTO payload, boolean printPrompt) {
         String replyMsgId = payload.getReplyToMessageId();
         if (replyMsgId == null || replyMsgId.isBlank()) {
-            if (printPrompt) sender.responseText(payload, "请引用一条图片消息哦");
+            if (printPrompt) sender.replyText(payload, "请引用一条图片消息哦");
             throw new InvalidCommandArgsException("", "未提取到引用消息");
         }
 
@@ -60,7 +60,7 @@ public class ImgExtractor {
         try {
             r = replyFetcher.fetch(payload.getSelfId(), Long.parseLong(replyMsgId));
         } catch (Exception e) {
-            if (printPrompt) sender.responseText(payload, "获取引用消息失败：" + e.getMessage());
+            if (printPrompt) sender.replyText(payload, "获取引用消息失败：" + e.getMessage());
             return List.of();
         }
         if (r == null || r.getImages() == null || r.getImages().isEmpty()) {

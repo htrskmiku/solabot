@@ -54,7 +54,7 @@ public class OneBotSender implements Sender {
     }
 
     @Override
-    public void responseText(ParsedPayloadDTO payload, Object text) {
+    public void replyText(ParsedPayloadDTO payload, Object text) {
         WebSocketSession session = sessions.get(payload.getSelfId());
         if (session == null || !session.isOpen() || text == null) return;
 
@@ -109,7 +109,7 @@ public class OneBotSender implements Sender {
     }
 
     @Override
-    public void responseImage(ParsedPayloadDTO payload, Object image) {
+    public void replyImage(ParsedPayloadDTO payload, Object image) {
         WebSocketSession session = sessions.get(payload.getSelfId());
         if (session == null || !session.isOpen() || image == null) return;
 

@@ -1,6 +1,6 @@
 package com.arth.bot;
 
-import com.arth.bot.core.mapper.MapperPackageMarker;
+import com.arth.bot.core.database.mapper.MapperPackageMarker;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

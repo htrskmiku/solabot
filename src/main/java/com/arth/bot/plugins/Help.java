@@ -18,11 +18,11 @@ public class Help {
     public void index(ParsedPayloadDTO payload) {
         ForwardChainBuilder built = forwardChainBuilder.create()
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                        这里是 solabot，正宗的纯血 java 国产自研（？）bot（后端），仅为风翼/翼遥烤群设计，目前支持以下三个模块：
+                        这里是 solabot，正宗的纯血 java 国产自研（？）bot（后端），仅为翼遥/风翼烤群设计，目前支持以下三个模块：
                           1. pjsk 啤酒烧烤
                           2. img 图片处理
                           3. test 测试
-                        命令的使用实例：/pjsk 绑定"""))
+                        命令的使用示例：/pjsk 绑定"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         pjsk 啤酒烧烤模块目前支持以下命令：
                           - 绑定 <pjsk id>: 绑定 pjsk 账号
@@ -52,7 +52,8 @@ public class Help {
                         模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块替换为我们的"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         img 图片处理模块目前支持以下命令：
-                        还没写好"""))
+                          - mid 镜像翻转
+                          - gray 转灰度图"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         test 测试模块目前支持以下命令：
                           - quanxian: 测试鉴权切面，硬编码仅允许 1093664084

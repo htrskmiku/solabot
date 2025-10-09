@@ -22,7 +22,7 @@ public interface Sender {
      * @param payload
      * @param text
      */
-    void responseText(ParsedPayloadDTO payload, Object text);
+    void replyText(ParsedPayloadDTO payload, Object text);
 
     /**
      * 控制 bot 发送一张图片（非回复），接收表示文件地址的 String 或 List<String>
@@ -38,7 +38,7 @@ public interface Sender {
      * @param payload
      * @param image
      */
-    void responseImage(ParsedPayloadDTO payload, Object image);
+    void replyImage(ParsedPayloadDTO payload, Object image);
 
     /**
      * 控制 bot 发送视频，接收 String
