@@ -33,6 +33,20 @@ public class Test {
     @Value("${app.client-access-url}")
     private String clientAccessUrl;
 
+    public static final String helpText = """
+                        test 测试模块目前支持以下命令：
+                          - quanxian: 测试鉴权切面，硬编码仅允许 1093664084
+                          - zuse <delay_time>: 测试多线程异步
+                          - huifu: 测试 bot 回复
+                          - tu: 测试发图
+                          - shipin: 测试发视频
+                          - zhuanfa <QQid> <QQname> <text>: 测试链式构造合并转发消息
+                          - yinyong <args...>: 测试 bot 获取图片引用消息""";
+
+    public void help(ParsedPayloadDTO payload) {
+        sender.replyText(payload, helpText);
+    }
+
     /**
      * 权限测试
      * @param payload

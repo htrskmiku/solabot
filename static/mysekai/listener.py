@@ -88,7 +88,7 @@ def create_app(queue=None):
         print(f"Saved [{api_type.upper()}]: {filepath}")
         print(f"Source URL: {x_original_url[:100]}{'...' if len(x_original_url) > 100 else ''}")
         print(f"File Size: {len(data)/1024:.2f} KB\n")
-        print(f"Current Time: {datetime.now().strftime("%Y:%m:%d %H:%M:%S")}")
+        print(f'Current Time: {datetime.now().strftime("%Y:%m:%d %H:%M:%S")}')
 
         if queue:
             await queue.put(filepath)

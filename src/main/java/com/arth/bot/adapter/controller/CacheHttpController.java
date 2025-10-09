@@ -23,12 +23,12 @@ public class CacheHttpController {
     private final RedisTemplate<String, byte[]> redisTemplate;
 
     /**
-     * Redis 图片缓存
+     * Redis PNG 图片缓存
      * @param uuid
      * @return
      */
-    @GetMapping("/imgs/{uuid}")
-    public ResponseEntity<Resource> getImg(@PathVariable String uuid) {
+    @GetMapping("/imgs/png/{uuid}")
+    public ResponseEntity<Resource> getPng(@PathVariable String uuid) {
         String key = "temp:image:png:" + uuid;
         byte[] imageBytes = redisTemplate.opsForValue().get(key);
         if (imageBytes == null || imageBytes.length == 0) {
@@ -39,6 +39,26 @@ public class CacheHttpController {
                 .contentType(MediaType.IMAGE_PNG)
                 .cacheControl(CacheControl.maxAge(Duration.ofMinutes(3)))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + uuid + ".png\"")
+                .body(resource);
+    }
+
+    /**
+     * Redis GIF 图片缓存
+     * @param uuid
+     * @return
+     */
+    @GetMapping("/imgs/gif/{uuid}")
+    public ResponseEntity<Resource> getGif(@PathVariable String uuid) {
+        String key = "temp:image:gif:" + uuid;
+        byte[] imageBytes = redisTemplate.opsForValue().get(key);
+        if (imageBytes == null || imageBytes.length == 0) {
+            return ResponseEntity.notFound().build();
+        }
+        ByteArrayResource resource = new ByteArrayResource(imageBytes);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_GIF)
+                .cacheControl(CacheControl.maxAge(Duration.ofMinutes(3)))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + uuid + ".gif\"")
                 .body(resource);
     }
 }

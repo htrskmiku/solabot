@@ -47,6 +47,8 @@ public class Pjsk {
 
     private String baseUrl;
 
+    public static final String helpText = "请通过 /help 查看 pjsk 模块具体的命令";
+
     @PostConstruct
     public void init() {
         this.baseUrl = "http://" + clientAccessUrl + ":" + port;
@@ -54,6 +56,10 @@ public class Pjsk {
 
     public void index(ParsedPayloadDTO payload) {
         sender.replyText(payload, "请接 pjsk 模块的具体命令哦");
+    }
+
+    public void help(ParsedPayloadDTO payload) {
+        sender.replyText(payload, helpText);
     }
 
     @BotCommand({"绑定"})

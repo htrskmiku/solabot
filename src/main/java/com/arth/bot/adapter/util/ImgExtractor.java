@@ -7,10 +7,12 @@ import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
 import com.arth.bot.core.common.dto.replay.ImageRef;
 import com.arth.bot.core.common.exception.InvalidCommandArgsException;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -25,30 +27,96 @@ public class ImgExtractor {
     private final Sender sender;
     private final ReplyFetcher replyFetcher;
 
-    public List<BufferedImage> getBufferedImgs(List<String> urls) {
-        List<BufferedImage> imgs = new ArrayList<>();
-
+    /**
+     * 从 url 下载一张静态图片，返回 BufferedImage
+     * @param aUrl
+     * @return
+     */
+    public BufferedImage getBufferedImg(String aUrl) {
         try {
-            for (String urlStr : urls) {
-                URL url = new URL(urlStr);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setConnectTimeout(10000);
-                connection.setReadTimeout(10000);
+            URL url = new URL(aUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
 
-                try (InputStream inputStream = connection.getInputStream()) {
-                    imgs.add(ImageIO.read(inputStream));
-                } finally {
-                    connection.disconnect();
-                }
+            try (InputStream inputStream = connection.getInputStream()) {
+                return ImageIO.read(inputStream);
+            } finally {
+                connection.disconnect();
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 从 url 下载多张静态图片，返回 List<BufferedImage>
+     * @param urls
+     * @return
+     */
+    public List<BufferedImage> getBufferedImg(List<String> urls) {
+        List<BufferedImage> imgs = new ArrayList<>();
+        try {
+            for (String url : urls) {
+                imgs.add(getBufferedImg(url));
             }
         } catch (Exception e) {
             return List.of();
         }
-
         return imgs;
     }
 
+    /**
+     * 从 url 下载一张图片，返回二进制数据 byte[]
+     * @param aUrl
+     * @return
+     */
+    public byte[] getBytes(String aUrl) {
+        try {
+            URL url = new URL(aUrl);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+
+            try (InputStream in = conn.getInputStream();
+                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) baos.write(buf, 0, n);
+                return baos.toByteArray();
+            } finally {
+                conn.disconnect();
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 从 url 下载多张图片，返回二进制数据 byte[][]
+     * @param urls
+     * @return
+     */
+    public byte[][] getBytes(List<String> urls) {
+        List<byte[]> imgs = new ArrayList<>();
+        try {
+            for (String url : urls) {
+                imgs.add(getBytes(url));
+            }
+        } catch (Exception e) {
+            return new byte[0][];
+        }
+        return imgs.toArray(new byte[0][]);
+    }
+
+    /**
+     * 从 OneBot v11 报文中提取图片媒体资源的 url
+     * @param payload
+     * @param printPrompt
+     * @return
+     */
     public List<String> extractImgUrls(ParsedPayloadDTO payload, boolean printPrompt) {
         String replyMsgId = payload.getReplyToMessageId();
         if (replyMsgId == null || replyMsgId.isBlank()) {

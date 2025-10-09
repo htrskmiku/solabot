@@ -50,21 +50,8 @@ public class Help {
                         hostname=%APPEND% mkcn-prod-public-60001-1.dailygn.com, submit.backtrace.io"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块替换为我们的"""))
-                .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                        img 图片处理模块目前支持以下命令：
-                          - mid 镜像对称，默认左对称
-                          - mid r 镜像对称，右对称
-                          - gray 转灰度图
-                          - mirror 水平镜像翻转"""))
-                .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                        test 测试模块目前支持以下命令：
-                          - quanxian: 测试鉴权切面，硬编码仅允许 1093664084
-                          - zuse <delay_time>: 测试多线程异步
-                          - huifu: 测试 bot 回复
-                          - tu: 测试发图
-                          - shipin: 测试发视频
-                          - zhuanfa <QQid> <QQname> <text>: 测试链式构造合并转发消息
-                          - yinyong <args...>: 测试 bot 获取图片引用消息"""));
+                .addCustomNode(payload.getSelfId(), "bot", n -> n.text(Img.helpText))
+                .addCustomNode(payload.getSelfId(), "bot", n -> n.text(Test.helpText));
 
         String json = (payload.getGroupId() != null) ?
                 built.toGroupJson(payload.getGroupId()) :built.toPrivateJson(payload.getUserId());
