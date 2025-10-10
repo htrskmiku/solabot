@@ -1,6 +1,6 @@
 package com.arth.bot.core.cache.service;
 
-import com.arth.bot.adapter.util.ImgExtractor;
+import com.arth.bot.adapter.util.ImgService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -19,7 +19,7 @@ public class CacheImageService {
     private final RedisTemplate<String, byte[]> redisTemplate;
 
     private static final Duration TTL = Duration.ofMinutes(3);
-    private final ImgExtractor imgExtractor;
+    private final ImgService imgService;
 
     /**
      * 缓存静态图片方法，要求输入 BufferedImage，返回 Redis 缓存的 UUID

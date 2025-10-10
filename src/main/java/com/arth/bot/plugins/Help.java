@@ -10,7 +10,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
-import java.util.List;
 
 @Component("plugins.help")
 @BotPlugin({"help"})
@@ -28,7 +27,7 @@ public class Help {
         }
 
         ForwardChainBuilder built = forwardChainBuilder.create().addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                这里是 solabot，正宗的纯血 java 国产自研（？）bot（后端），仅为翼遥/风翼烤群设计，目前支持以下三个模块：
+                这里是 solabot，一只具有独立 java 后端的 bot，本世代为「ickk」，主要为翼遥/风翼烤群而设计，目前支持以下三个模块：
                   1. pjsk 啤酒烧烤
                   2. img 图片处理
                   3. test 测试
