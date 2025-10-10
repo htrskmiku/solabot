@@ -1,13 +1,25 @@
 # solabot
 
-设计仅为重庆大学烤群使用的 bot 后端，与 bot 客户端交互，主要服务于 PJSK。
+仅为重庆大学 PJSK 同好群「 翼遥啤酒烧烤大排档」设计的 bot 后端。
 
-基于 OneBot v11 协议。
+# version
+
+OpenJDK 17+
+
+Spring Boot 3.5
+
+Docker 27.5
+
+PostgreSQL 16
+
+Redis 7
+
+NapCat（OneBot v11）
 
 # docker
 
 ```bash
-# Start containers (and build if not exists) in detached mode
+# Start containers (and build if not exists) in detached mode before running the project
 docker compose -f docker-compose.dev.yaml up -d
 
 # Enter the bash interactive shell of the PostgreSQL container
@@ -28,15 +40,3 @@ docker stop $(docker ps -q)
 mvn clean package
 mvn spring-boot:run  # java -jar target/bot-0.0.1-SNAPSHOT.jar
 ```
-
-# version
-
-OpenJDK 17+
-
-Spring Boot 3.5
-
-Docker 27.5
-
-PostgreSQL 16
-
-Redis 7

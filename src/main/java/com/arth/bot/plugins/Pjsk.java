@@ -110,6 +110,7 @@ public class Pjsk {
         }
     }
 
+    @BotCommand({"msm", "msr"})
     public void msm(ParsedPayloadDTO payload) {
         long userId = payload.getUserId();
         Long groupId = payload.getGroupId();
@@ -134,7 +135,7 @@ public class Pjsk {
                 FileTime timestamp = Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime();
                 updatedTime = dateTimeFormatter.format(timestamp.toInstant());
             } catch (IOException e) {
-                sender.replyText(payload, "MySekai 数据存在，但获取更新日期失败: IOException");
+                sender.replyText(payload, "MySekai 数据存在，但获取更新日期失败: 抛出了 IOException");
                 throw new InternalServerErrorException("IOException: " + e.getCause().getMessage(), "MySekai 数据存在，但获取更新日期失败: IOException");
             }
         }

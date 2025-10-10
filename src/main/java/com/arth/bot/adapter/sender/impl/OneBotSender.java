@@ -40,16 +40,14 @@ public class OneBotSender implements Sender {
         WebSocketSession session = sessions.get(payload.getSelfId());
         if (session == null || !session.isOpen() || text == null) return;
 
-        synchronized (session) {
-            try {
-                if (text instanceof Iterable<?> it) {
-                    for (Object o : it) sendTextOnce(session, payload, o);
-                } else {
-                    sendTextOnce(session, payload, text);
-                }
-            } catch (Exception e) {
-                log.warn("[adapter] send text failed", e);
+        try {
+            if (text instanceof Iterable<?> it) {
+                for (Object o : it) sendTextOnce(session, payload, o);
+            } else {
+                sendTextOnce(session, payload, text);
             }
+        } catch (Exception e) {
+            log.warn("[adapter] send text failed", e);
         }
     }
 
@@ -58,16 +56,14 @@ public class OneBotSender implements Sender {
         WebSocketSession session = sessions.get(payload.getSelfId());
         if (session == null || !session.isOpen() || text == null) return;
 
-        synchronized (session) {
-            try {
-                if (text instanceof Iterable<?> it) {
-                    for (Object o : it) responseTextOnce(session, payload, o);
-                } else {
-                    responseTextOnce(session, payload, text);
-                }
-            } catch (Exception e) {
-                log.warn("[adapter] send text failed", e);
+        try {
+            if (text instanceof Iterable<?> it) {
+                for (Object o : it) responseTextOnce(session, payload, o);
+            } else {
+                responseTextOnce(session, payload, text);
             }
+        } catch (Exception e) {
+            log.warn("[adapter] send text failed", e);
         }
     }
 
@@ -76,35 +72,33 @@ public class OneBotSender implements Sender {
         WebSocketSession session = sessions.get(payload.getSelfId());
         if (session == null || !session.isOpen() || image == null) return;
 
-        synchronized (session) {
-            try {
-                String json;
-                if (image instanceof Iterable<?> it) {
-                    var files = toFileList(it);
-                    if (files.isEmpty()) return;
-                    if (files.size() == 1) {
-                        String f = files.get(0);
-                        json = payload.getGroupId() != null
-                                ? simpleActionBuilder.buildGroupSendImageAction(payload.getGroupId(), f)
-                                : simpleActionBuilder.buildPrivateSendImageAction(payload.getUserId(), f);
-                    } else {
-                        json = payload.getGroupId() != null
-                                ? buildMultiImageSendJson("group", Map.of("group_id", payload.getGroupId()), files)
-                                : buildMultiImageSendJson("private", Map.of("user_id", payload.getUserId()), files);
-                    }
-                } else {
-                    String f = String.valueOf(image);
-                    if (f == null || f.isBlank()) return;
+        try {
+            String json;
+            if (image instanceof Iterable<?> it) {
+                var files = toFileList(it);
+                if (files.isEmpty()) return;
+                if (files.size() == 1) {
+                    String f = files.get(0);
                     json = payload.getGroupId() != null
                             ? simpleActionBuilder.buildGroupSendImageAction(payload.getGroupId(), f)
                             : simpleActionBuilder.buildPrivateSendImageAction(payload.getUserId(), f);
+                } else {
+                    json = payload.getGroupId() != null
+                            ? buildMultiImageSendJson("group", Map.of("group_id", payload.getGroupId()), files)
+                            : buildMultiImageSendJson("private", Map.of("user_id", payload.getUserId()), files);
                 }
-
-                log.debug("[adapter] sending image: {}", json);
-                session.sendMessage(new TextMessage(json));
-            } catch (Exception e) {
-                log.warn("[adapter] send image failed", e);
+            } else {
+                String f = String.valueOf(image);
+                if (f == null || f.isBlank()) return;
+                json = payload.getGroupId() != null
+                        ? simpleActionBuilder.buildGroupSendImageAction(payload.getGroupId(), f)
+                        : simpleActionBuilder.buildPrivateSendImageAction(payload.getUserId(), f);
             }
+
+            log.debug("[adapter] sending image: {}", json);
+            session.sendMessage(new TextMessage(json));
+        } catch (Exception e) {
+            log.warn("[adapter] send image failed", e);
         }
     }
 
@@ -113,37 +107,35 @@ public class OneBotSender implements Sender {
         WebSocketSession session = sessions.get(payload.getSelfId());
         if (session == null || !session.isOpen() || image == null) return;
 
-        synchronized (session) {
-            try {
-                String json;
-                if (image instanceof Iterable<?> it) {
-                    var files = toFileList(it);
-                    if (files.isEmpty()) return;
-                    if (files.size() == 1) {
-                        String f = files.get(0);
-                        json = payload.getGroupId() != null
-                                ? simpleActionBuilder.buildGroupReplyImageAction(payload.getGroupId(), payload.getMessageId(), f)
-                                : simpleActionBuilder.buildPrivateReplyImageAction(payload.getUserId(), payload.getMessageId(), f);
-                    } else {
-                        json = payload.getGroupId() != null
-                                ? buildMultiImageResponseJson("group", Map.of("group_id", payload.getGroupId()),
-                                payload.getMessageId(), files)
-                                : buildMultiImageResponseJson("private", Map.of("user_id", payload.getUserId()),
-                                payload.getMessageId(), files);
-                    }
-                } else {
-                    String f = String.valueOf(image);
-                    if (f == null || f.isBlank()) return;
+        try {
+            String json;
+            if (image instanceof Iterable<?> it) {
+                var files = toFileList(it);
+                if (files.isEmpty()) return;
+                if (files.size() == 1) {
+                    String f = files.get(0);
                     json = payload.getGroupId() != null
                             ? simpleActionBuilder.buildGroupReplyImageAction(payload.getGroupId(), payload.getMessageId(), f)
                             : simpleActionBuilder.buildPrivateReplyImageAction(payload.getUserId(), payload.getMessageId(), f);
+                } else {
+                    json = payload.getGroupId() != null
+                            ? buildMultiImageResponseJson("group", Map.of("group_id", payload.getGroupId()),
+                            payload.getMessageId(), files)
+                            : buildMultiImageResponseJson("private", Map.of("user_id", payload.getUserId()),
+                            payload.getMessageId(), files);
                 }
-
-                log.debug("[adapter] responding image: {}", json);
-                session.sendMessage(new TextMessage(json));
-            } catch (Exception e) {
-                log.warn("[adapter] respond image failed", e);
+            } else {
+                String f = String.valueOf(image);
+                if (f == null || f.isBlank()) return;
+                json = payload.getGroupId() != null
+                        ? simpleActionBuilder.buildGroupReplyImageAction(payload.getGroupId(), payload.getMessageId(), f)
+                        : simpleActionBuilder.buildPrivateReplyImageAction(payload.getUserId(), payload.getMessageId(), f);
             }
+
+            log.debug("[adapter] responding image: {}", json);
+            session.sendMessage(new TextMessage(json));
+        } catch (Exception e) {
+            log.warn("[adapter] respond image failed", e);
         }
     }
 
@@ -152,43 +144,41 @@ public class OneBotSender implements Sender {
         WebSocketSession session = sessions.get(payload.getSelfId());
         if (session == null || !session.isOpen() || video == null) return;
 
-        synchronized (session) {
-            try {
-                String json;
-                if (video instanceof Iterable<?> it) {
-                    var files = toFileList(it);
-                    if (files.isEmpty()) return;
-                    if (files.size() == 1) {
-                        String f = files.get(0);
-                        json = payload.getGroupId() != null
-                                ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
-                                : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
-                    } else {
-                        String f = files.get(0);
-                        json = payload.getGroupId() != null
-                                ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
-                                : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
-                        for (int i = 1; i < files.size(); i++) {
-                            String remainingFile = files.get(i);
-                            String remainingJson = payload.getGroupId() != null
-                                    ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), remainingFile)
-                                    : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), remainingFile);
-                            session.sendMessage(new TextMessage(remainingJson));
-                        }
-                    }
-                } else {
-                    String f = String.valueOf(video);
-                    if (f == null || f.isBlank()) return;
+        try {
+            String json;
+            if (video instanceof Iterable<?> it) {
+                var files = toFileList(it);
+                if (files.isEmpty()) return;
+                if (files.size() == 1) {
+                    String f = files.get(0);
                     json = payload.getGroupId() != null
                             ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
                             : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
+                } else {
+                    String f = files.get(0);
+                    json = payload.getGroupId() != null
+                            ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
+                            : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
+                    for (int i = 1; i < files.size(); i++) {
+                        String remainingFile = files.get(i);
+                        String remainingJson = payload.getGroupId() != null
+                                ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), remainingFile)
+                                : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), remainingFile);
+                        session.sendMessage(new TextMessage(remainingJson));
+                    }
                 }
-
-                log.debug("[adapter] sending video: {}", json);
-                session.sendMessage(new TextMessage(json));
-            } catch (Exception e) {
-                log.warn("[adapter] send video failed", e);
+            } else {
+                String f = String.valueOf(video);
+                if (f == null || f.isBlank()) return;
+                json = payload.getGroupId() != null
+                        ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), f)
+                        : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
             }
+
+            log.debug("[adapter] sending video: {}", json);
+            session.sendMessage(new TextMessage(json));
+        } catch (Exception e) {
+            log.warn("[adapter] send video failed", e);
         }
     }
 
@@ -199,12 +189,11 @@ public class OneBotSender implements Sender {
             log.warn("[adapter] raw json send: session missing/closed, selfId={}", selfId);
             return;
         }
-        synchronized (session) {
-            try {
-                session.sendMessage(new TextMessage(json));
-            } catch (Exception e) {
-                log.warn("[adapter] raw json send failed, selfId={}", selfId, e);
-            }
+
+        try {
+            session.sendMessage(new TextMessage(json));
+        } catch (Exception e) {
+            log.warn("[adapter] raw json send failed, selfId={}", selfId, e);
         }
     }
 

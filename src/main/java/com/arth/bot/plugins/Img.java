@@ -4,6 +4,7 @@ import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.util.ImgExtractor;
 import com.arth.bot.core.cache.service.CacheImageService;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
+import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -48,13 +49,18 @@ public class Img {
                         img 图片处理模块目前支持以下命令：
                           - mid: 镜像对称，默认左对称
                           - mid r: 镜像对称，右对称
-                          - speed <n> x: 加速 gif 为 n 倍
+                          - speed <n>: 加速 gif 为 n 倍
                             n 可以为负数，表示倒放
+                          - cutout: 纯色背景抠图透明底
+                            实现方案是自边缘背景起优先队列+DFS泛洪
+                            可以跟 <阈值> 参数指定阈值，默认100
+                            阈值为与背景RGB欧氏距离允许的均方误差
                           - gray: 转灰度图
                           - mirror: 水平镜像翻转
                           - gif: 转gif
-                            QQ里看起来更像表情包
-                          - png: 转png""";
+                            在QQ里看起来会更像表情包
+                          - png: 转png
+                          - check: 检查图片url""";
 
     @PostConstruct
     public void init() {
@@ -125,7 +131,7 @@ public class Img {
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
-    public void speed(ParsedPayloadDTO payload, List<String> args) throws Exception {
+    public void speed(ParsedPayloadDTO payload, List<String> args) throws IOException {
         if (args == null || args.isEmpty()) {
             sender.replyText(payload, "没有指定加速 / 减速倍率哦");
             return;
@@ -173,22 +179,105 @@ public class Img {
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
-    public void mirror(ParsedPayloadDTO payload) throws IOException {
+    public void cutout(ParsedPayloadDTO payload, List<String> args) throws IOException {
+        int threshold = 100;
+
+        if (args != null && !args.isEmpty()) {
+            try {
+                threshold = Integer.parseInt(args.get(0));
+            } catch (NumberFormatException e) {
+                sender.replyText(payload, "阈值参数不合法");
+                return;
+            }
+        }
+
         List<String> urls = imgExtractor.extractImgUrls(payload, true);
         if (urls == null || urls.isEmpty()) return;
         List<BufferedImage> imgs = imgExtractor.getBufferedImg(urls);
 
+        // 强制使用支持 ARGB 的 BufferedImage 子类型，否则写入时 alpha 通道会被 ImageIO 忽略
+        for (int i = 0; i < imgs.size(); i++) {
+            BufferedImage img = imgs.get(i);
+            if (img.getType() != BufferedImage.TYPE_INT_ARGB) {
+                BufferedImage argbImg = new BufferedImage(
+                        img.getWidth(),
+                        img.getHeight(),
+                        BufferedImage.TYPE_INT_ARGB
+                );
+                Graphics2D g = argbImg.createGraphics();
+                g.drawImage(img, 0, 0, null);
+                g.dispose();
+                imgs.set(i, argbImg);
+            }
+        }
+
+        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+
         for (BufferedImage img : imgs) {
             int width = img.getWidth();
             int height = img.getHeight();
+            /* map pixel to index */
+            Map<Integer, Set<Long>> rgbSta = new HashMap<>();
 
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width / 2; x++) {
-                    int leftPixel = img.getRGB(x, y);
-                    int rightPixel = img.getRGB(width - x - 1, y);
+            if (width < 6 || height < 6) {
+                sender.replyText(payload, "图片过小");
+                return;
+            }
 
-                    img.setRGB(x, y, rightPixel);
-                    img.setRGB(width - x - 1, y, leftPixel);
+            // 1. 统计四个边缘上出现频次最高的颜色，每条边宽度硬编码 3
+            for (int w = 0; w < width; w++) {
+                for (int i = 0; i < 3; i++) {
+                    rgbSta.computeIfAbsent(img.getRGB(w, i), k -> new HashSet<>()).add(((long) w << 32) | (i & 0xffffffffL));
+                    rgbSta.computeIfAbsent(img.getRGB(w, height - i - 1), k -> new HashSet<>()).add(((long) w << 32) | ((height - i - 1) & 0xffffffffL));
+                }
+           }
+            for (int h = 1; h < height - 1; h++) {
+                for (int i = 0; i < 3; i++) {
+                    rgbSta.computeIfAbsent(img.getRGB(i, h), k -> new HashSet<>()).add(((long) i << 32) | (h & 0xffffffffL));
+                    rgbSta.computeIfAbsent(img.getRGB(width -i - 1, h), k -> new HashSet<>()).add(((long) (width -i - 1) << 32) | (h & 0xffffffffL));
+                }
+            }
+
+            Set<Long> bgPixelIndex = rgbSta.values().stream()
+                    .max(Comparator.comparingInt(Set::size))
+                    .orElseThrow(() -> new InternalServerErrorException("rgbSta cannot be empty"));
+
+            if (bgPixelIndex.isEmpty()) throw new InternalServerErrorException("bgPixelIndex cannot be empty");
+
+            long aBgIndex = bgPixelIndex.iterator().next();
+            int bgRgb = img.getRGB((int) (aBgIndex >>> 32), (int) aBgIndex);
+
+            // 2. 初始化优先队列，将所有边缘上出现频次最高的颜色加入优先队列
+            Set<Long> visited = new HashSet<>(bgPixelIndex);
+            PriorityQueue<Pixel> pq = new PriorityQueue<>(Comparator.comparingDouble(Pixel::dist));
+            for (long index : bgPixelIndex) {
+                int x = (int) (index >>> 32);
+                int y = (int) index;
+                pq.offer(new Pixel(x, y, img.getRGB(x, y), 0));
+            }
+
+            // 3. BFS 抠图透明底
+            while (!pq.isEmpty()) {
+                Pixel p = pq.poll();
+                int x = p.x();
+                int y = p.y();
+
+                if (p.dist() > threshold) continue;
+                img.setRGB(x, y, p.rgb() & 0x00ffffff);
+
+                for (int[] d : dirs) {
+                    int nx = x + d[0];
+                    int ny = y + d[1];
+                    if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+
+                    long idx = ((long) nx << 32) | (ny & 0xffffffffL);
+                    if (visited.contains(idx)) continue;
+
+                    visited.add(idx);
+                    int nRgb = img.getRGB(nx, ny);
+                    int dist = distance(bgRgb, nRgb);
+
+                    pq.offer(new Pixel(nx, ny, nRgb, dist));
                 }
             }
         }
@@ -222,6 +311,32 @@ public class Img {
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
+    public void mirror(ParsedPayloadDTO payload) throws IOException {
+        List<String> urls = imgExtractor.extractImgUrls(payload, true);
+        if (urls == null || urls.isEmpty()) return;
+        List<BufferedImage> imgs = imgExtractor.getBufferedImg(urls);
+
+        for (BufferedImage img : imgs) {
+            int width = img.getWidth();
+            int height = img.getHeight();
+
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width / 2; x++) {
+                    int leftPixel = img.getRGB(x, y);
+                    int rightPixel = img.getRGB(width - x - 1, y);
+
+                    img.setRGB(x, y, rightPixel);
+                    img.setRGB(width - x - 1, y, leftPixel);
+                }
+            }
+        }
+
+        List<String> uuids = cacheImageService.cacheImage(imgs);
+        List<String> cacheUrls = new ArrayList<>(uuids.size());
+        for (String uuid : uuids) cacheUrls.add(baseUrl + "/cache/resource/imgs/png/" + uuid);
+        if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
+    }
+
     public void gif(ParsedPayloadDTO payload) throws IOException {
         toType(payload, "gif");
     }
@@ -230,9 +345,41 @@ public class Img {
         toType(payload, "png");
     }
 
+    public void check(ParsedPayloadDTO payload) {
+        List<String> urls = imgExtractor.extractImgUrls(payload, true);
+        if (urls == null || urls.isEmpty()) {
+            sender.sendText(payload, "引用消息里没有找到图片");
+        } else {
+            sender.replyText(payload, "提取到的图片 URL 为：" + urls);
+        }
+    }
+
     // ***** ============= helper ============= *****
     // ***** ============= helper ============= *****
     // ***** ============= helper ============= *****
+    // ***** ============= helper ============= *****
+    // ***** ============= helper ============= *****
+    // ***** ============= helper ============= *****
+
+    private record Pixel(int x, int y, int rgb, int dist) {}
+
+    /**
+     * 返回 RGB 的平方距离差值（避免欧氏距离的根号计算）
+     * @param rgb1
+     * @param rgb2
+     * @return
+     */
+    private static int distance(int rgb1, int rgb2) {
+        int r1 = (rgb1 >> 16) & 0xff;
+        int g1 = (rgb1 >> 8) & 0xff;
+        int b1 = rgb1 & 0xff;
+
+        int r2 = (rgb2 >> 16) & 0xff;
+        int g2 = (rgb2 >> 8) & 0xff;
+        int b2 = rgb2 & 0xff;
+
+        return (r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2);
+    }
 
     private static class GifData {
         List<BufferedImage> frames = new ArrayList<>();
@@ -483,7 +630,7 @@ public class Img {
                     gce = new IIOMetadataNode("GraphicControlExtension");
                     fmRoot.appendChild(gce);
                 }
-                gce.setAttribute("disposalMethod", "none");
+                gce.setAttribute("disposalMethod", "restoreToBackgroundColor");
                 gce.setAttribute("userInputFlag", "FALSE");
                 gce.setAttribute("transparentColorFlag", "FALSE");
                 gce.setAttribute("delayTime", Integer.toString(delay));

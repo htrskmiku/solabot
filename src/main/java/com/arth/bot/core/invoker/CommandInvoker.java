@@ -1,5 +1,6 @@
 package com.arth.bot.core.invoker;
 
+import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.BusinessException;
 import com.arth.bot.core.common.exception.CommandNotFoundException;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
@@ -122,9 +123,9 @@ public class CommandInvoker {
             return 6;
         } else if (ps.length == 1 && ps[0] == CommandChainContext.class) {
             return 5;
-        } else if (ps.length == 2 && ps[0] == com.arth.bot.core.common.dto.ParsedPayloadDTO.class && List.class.isAssignableFrom(ps[1])) {
+        } else if (ps.length == 2 && ps[0] == ParsedPayloadDTO.class && List.class.isAssignableFrom(ps[1])) {
             return 4;
-        } else if (ps.length == 1 && ps[0] == com.arth.bot.core.common.dto.ParsedPayloadDTO.class) {
+        } else if (ps.length == 1 && ps[0] == ParsedPayloadDTO.class) {
             return 3;
         } else if (ps.length == 1 && List.class.isAssignableFrom(ps[0])) {
             return 2;
@@ -140,7 +141,7 @@ public class CommandInvoker {
      * @param payload
      * @return
      */
-    public Object parseAndInvoke(com.arth.bot.core.common.dto.ParsedPayloadDTO payload) {
+    public Object parseAndInvoke(ParsedPayloadDTO payload) {
         String line = payload.getCommandText();
 
         if (line == null || line.isBlank()) {
@@ -193,7 +194,7 @@ public class CommandInvoker {
      * @return
      */
     @Deprecated
-    private String extractLeadingSlashCommand(com.arth.bot.core.common.dto.ParsedPayloadDTO payload) {
+    private String extractLeadingSlashCommand(ParsedPayloadDTO payload) {
         String rowText = payload.getRawText();
         if (rowText == null || rowText.isEmpty()) return null;
         if (!rowText.startsWith("/")) {
@@ -322,7 +323,7 @@ public class CommandInvoker {
                 else return m.invoke(bean, chainCtx.getPayload(), args);
             } else if (ps.length == 1) {
                 if (ps[0] == CommandChainContext.class) return m.invoke(bean, chainCtx);
-                else if (ps[0] == com.arth.bot.core.common.dto.ParsedPayloadDTO.class)
+                else if (ps[0] == ParsedPayloadDTO.class)
                     return m.invoke(bean, chainCtx.getPayload());
                 else return m.invoke(bean, args);
             } else {

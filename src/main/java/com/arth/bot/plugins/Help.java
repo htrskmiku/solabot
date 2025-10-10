@@ -5,7 +5,12 @@ import com.arth.bot.adapter.sender.action.ForwardChainBuilder;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
+
+import java.lang.reflect.Field;
+import java.util.List;
 
 @Component("plugins.help")
 @BotPlugin({"help"})
@@ -14,14 +19,22 @@ public class Help {
 
     private final Sender sender;
     private final ForwardChainBuilder forwardChainBuilder;
+    private final ApplicationContext applicationContext;
 
     public void index(ParsedPayloadDTO payload) {
+        if (payload.getCommandText().matches("/help\\s+\\S+")) {
+            pluginHelp(payload, payload.getCommandText().substring(6));
+            return;
+        }
+
         ForwardChainBuilder built = forwardChainBuilder.create().addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                 这里是 solabot，正宗的纯血 java 国产自研（？）bot（后端），仅为翼遥/风翼烤群设计，目前支持以下三个模块：
                   1. pjsk 啤酒烧烤
                   2. img 图片处理
                   3. test 测试
-                命令的使用示例：/pjsk 绑定""")).addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
+                命令的使用方法为 “/模块名 命令名 <参数>”，示例：/pjsk 绑定；
+                可以通过 “/help 模块名” 或 “/模块名 help” 单独查看指定模块的帮助文档"""))
+                .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                 pjsk 啤酒烧烤模块目前支持以下命令：
                   - 绑定 <pjsk id>: 绑定 pjsk 账号
                   - 绑定 / 查询绑定: 查看 pjsk 账号的绑定
@@ -60,5 +73,24 @@ public class Help {
         String json = (payload.getGroupId() != null) ? built.toGroupJson(payload.getGroupId()) : built.toPrivateJson(payload.getUserId());
 
         sender.pushActionJSON(payload.getSelfId(), json);
+    }
+
+    private void pluginHelp(ParsedPayloadDTO payload, String pluginName) {
+        if (pluginName == null || pluginName.isEmpty()) {
+            index(payload);
+            return;
+        }
+
+        try {
+            Object pluginBean = applicationContext.getBean("plugins." + pluginName);
+            Class<?> clazz = pluginBean.getClass();
+            Field field = clazz.getField("helpText");
+            String helpTextStr = (String) field.get(null);;
+            sender.replyText(payload, helpTextStr);
+        } catch (BeansException e) {
+            sender.replyText(payload, "不存在指定 plugin 的 Bean 对象，是否输入了错误的 plugin 名称？");
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            sender.replyText(payload, "尝试获取 plugin 的 Bean 对象帮助文档字段时抛出了反射异常");
+        }
     }
 }

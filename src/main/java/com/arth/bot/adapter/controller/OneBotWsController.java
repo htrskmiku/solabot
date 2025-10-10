@@ -16,7 +16,9 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 @Slf4j
 @Controller
@@ -66,8 +68,7 @@ public class OneBotWsController extends TextWebSocketHandler {
                 /* 多线程异步解析命令 */
                 executorService.execute(() -> {
                     try {
-                        Object res = commandInvoker.parseAndInvoke(dto);
-                        sender.sendText(dto, res);
+                        commandInvoker.parseAndInvoke(dto);
                     } catch (Exception e) {
                         log.error("[adapter] async handle error", e);
                     }
