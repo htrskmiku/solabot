@@ -43,13 +43,13 @@ public class OneBotForwardChainBuilder implements ForwardChainBuilder {
      * 自定义节点（“伪造”发送者 + 内容分段）
      */
     @Override
-    public ForwardChainBuilder addCustomNode(long uin, String name, Consumer<ForwardChainBuilder.NodeContent> builder) {
+    public ForwardChainBuilder addCustomNode(long userId, String nickname, Consumer<ForwardChainBuilder.NodeContent> builder) {
         OneBotForwardChainBuilder.NodeContent nc = new OneBotForwardChainBuilder.NodeContent();
         builder.accept(nc);
 
         Map<String, Object> data = new HashMap<>();
-        data.put("uin", String.valueOf(uin));
-        data.put("name", name);
+        data.put("uin", String.valueOf(userId));
+        data.put("name", nickname);
         data.put("content", nc.segments);
 
         Map<String, Object> node = new HashMap<>();

@@ -26,6 +26,7 @@ public class Test {
     private final Sender sender;
     private final ForwardChainBuilder forwardChainBuilder;
     private final ReplyFetcher replyFetcher;
+    private final Help helpPlugin;
 
     @Value("${server.port}")
     private String port;
@@ -44,7 +45,7 @@ public class Test {
                           - yinyong <args...>: 测试 bot 获取图片引用消息""";
 
     public void help(ParsedPayloadDTO payload) {
-        sender.replyText(payload, helpText);
+        helpPlugin.pluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
     }
 
     /**

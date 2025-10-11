@@ -6,6 +6,7 @@ import com.arth.bot.adapter.util.ImgService.GifData;
 import com.arth.bot.core.cache.service.CacheImageService;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
+import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class Img {
     private final Sender sender;
     private final ImgService imgService;
     private final CacheImageService cacheImageService;
+    private final Help helpPlugin;
 
     private static final int GIF_MIN_CS = 2;      // GIF 最小播放时间间隔
     private static final int GIF_MAX_CS = 65535;  // GIF 最大播放时间间隔
@@ -46,14 +48,15 @@ public class Img {
 
     public static final String helpText = """
                         img 图片处理模块目前支持以下命令：
-                          - mid: 镜像对称，默认左对称
-                          - mid r: 镜像对称，右对称
+                          - l 或 left: 镜像对称，左对称
+                          - r 或 right: 镜像对称，右对称
+                          - u 或 up：镜像对称，上对称
+                          - d 或 down：镜像对称，下对称
+                          - rotate <90整数倍>：顺时针旋转，默认90°
                           - speed <n>: 加速 gif 为 n 倍
                             n 可以为负数，表示倒放
                           - cutout: 纯色背景抠图透明底
-                            实现方案是自边缘背景起优先队列+BFS泛洪
-                            可以跟 <阈值> 参数指定阈值，默认100
-                            阈值为与背景RGB欧氏距离允许的均方误差
+                            可以跟 <阈值> 参数指定阈值，默认100，阈值表示像素与背景RGB欧氏距离的最大均方误差
                           - gray: 转灰度图
                           - mirror: 水平镜像翻转
                           - gif: 转gif
@@ -67,14 +70,15 @@ public class Img {
     }
 
     public void index(ParsedPayloadDTO payload) {
-        sender.sendText(payload, "具体的图片处理命令是什么呢？");
+        sender.replyText(payload, "具体的图片处理命令是什么呢？");
     }
 
     public void help(ParsedPayloadDTO payload) {
-        sender.replyText(payload, helpText);
+        helpPlugin.pluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
     }
 
-    public void mid(ParsedPayloadDTO payload) throws IOException {
+    @BotCommand({"l", "left"})
+    public void leftSymmetry(ParsedPayloadDTO payload) throws IOException {
         // 支持静态图片与 GIF（动态）混合输入，输出保持输入顺序
         List<String> urls = imgService.extractImgUrls(payload, true);
         if (urls == null || urls.isEmpty()) return;
@@ -91,7 +95,7 @@ public class Img {
                 // 处理 GIF：解析、逐帧 midLeft、写回 GIF
                 GifData gif = imgService.getGifFlattened(new ByteArrayInputStream(data));
                 if (gif == null) continue;
-                gifsMidLeft(List.of(gif));
+                gifSymmetryByLeft(List.of(gif));
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = cacheImageService.cacheImage(outBytes);
                 cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
@@ -102,7 +106,7 @@ public class Img {
                 List<BufferedImage> imgs = new ArrayList<>();
                 imgs.add(img);
                 // 原有静态逻辑：midLeft
-                midLeft(imgs);
+                symmetryByLeft(imgs);
                 // 缓存为 png
                 String uuid = cacheImageService.cacheImage(imgs.get(0), "png");
                 cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
@@ -114,18 +118,9 @@ public class Img {
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
-    public void mid(ParsedPayloadDTO payload, List<String> args) throws IOException {
-        if (args == null || args.isEmpty() || args.get(0).equals("l")  || args.get(0).equals("left")) {
-            mid(payload);
-            return;
-        }
-
-        if (!args.get(0).equals("r") && !args.get(0).equals("right")) {
-            sender.replyText(payload, "mid 命令支持的参数是 l 或 r，默认 l");
-            return;
-        }
-
-        // 右对称处理，支持静态与 GIF 混合
+    @BotCommand({"r", "right"})
+    public void rightSymmetry(ParsedPayloadDTO payload) throws IOException {
+        // 支持静态图片与 GIF（动态）混合输入，输出保持输入顺序
         List<String> urls = imgService.extractImgUrls(payload, true);
         if (urls == null || urls.isEmpty()) return;
 
@@ -140,7 +135,7 @@ public class Img {
             if ("gif".equals(type)) {
                 GifData gif = imgService.getGifFlattened(new ByteArrayInputStream(data));
                 if (gif == null) continue;
-                gifsMidRight(List.of(gif));
+                gifSymmetryByRight(List.of(gif));
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = cacheImageService.cacheImage(outBytes);
                 cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
@@ -149,7 +144,174 @@ public class Img {
                 if (img == null) continue;
                 List<BufferedImage> imgs = new ArrayList<>();
                 imgs.add(img);
-                midRight(imgs);
+                symmetryByRight(imgs);
+                String uuid = cacheImageService.cacheImage(imgs.get(0), "png");
+                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+            }
+        }
+
+        List<String> cacheUrls = new ArrayList<>();
+        for (String s : cacheUrlsOrdered) if (s != null) cacheUrls.add(s);
+        if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
+    }
+
+    @BotCommand({"u", "up"})
+    public void up(ParsedPayloadDTO payload) throws IOException {
+        // 支持静态图片与 GIF（动态）混合输入，输出保持输入顺序
+        List<String> urls = imgService.extractImgUrls(payload, true);
+        if (urls == null || urls.isEmpty()) return;
+
+        int n = urls.size();
+        List<String> cacheUrlsOrdered = new ArrayList<>(Collections.nCopies(n, null));
+
+        for (int i = 0; i < n; i++) {
+            String url = urls.get(i);
+            byte[] data = imgService.getBytes(url);
+            if (data == null || data.length == 0) continue;
+            String type = imgService.detectImageType(data);
+
+            if ("gif".equals(type)) {
+                // 解析 GIF 并逐帧处理
+                GifData gif = imgService.getGifFlattened(new ByteArrayInputStream(data));
+                if (gif == null) continue;
+                gifSymmetryByUp(List.of(gif));
+                byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
+                String uuid = cacheImageService.cacheImage(outBytes);
+                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+            } else {
+                // 静态图片：单帧翻转
+                BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
+                if (img == null) continue;
+                List<BufferedImage> imgs = new ArrayList<>();
+                imgs.add(img);
+                symmetryByUp(imgs);
+                String uuid = cacheImageService.cacheImage(imgs.get(0), "png");
+                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+            }
+        }
+
+        List<String> cacheUrls = new ArrayList<>();
+        for (String s : cacheUrlsOrdered) if (s != null) cacheUrls.add(s);
+        if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
+    }
+
+    @BotCommand({"d", "down"})
+    public void down(ParsedPayloadDTO payload) throws IOException {
+        // 支持静态图片与 GIF（动态）混合输入，输出保持输入顺序
+        List<String> urls = imgService.extractImgUrls(payload, true);
+        if (urls == null || urls.isEmpty()) return;
+
+        int n = urls.size();
+        List<String> cacheUrlsOrdered = new ArrayList<>(Collections.nCopies(n, null));
+
+        for (int i = 0; i < n; i++) {
+            String url = urls.get(i);
+            byte[] data = imgService.getBytes(url);
+            if (data == null || data.length == 0) continue;
+            String type = imgService.detectImageType(data);
+
+            if ("gif".equals(type)) {
+                GifData gif = imgService.getGifFlattened(new ByteArrayInputStream(data));
+                if (gif == null) continue;
+                gifSymmetryByDown(List.of(gif));
+                byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
+                String uuid = cacheImageService.cacheImage(outBytes);
+                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+            } else {
+                BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
+                if (img == null) continue;
+                List<BufferedImage> imgs = new ArrayList<>();
+                imgs.add(img);
+                symmetryByDown(imgs);
+                String uuid = cacheImageService.cacheImage(imgs.get(0), "png");
+                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+            }
+        }
+
+        List<String> cacheUrls = new ArrayList<>();
+        for (String s : cacheUrlsOrdered) if (s != null) cacheUrls.add(s);
+        if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
+    }
+
+    /**
+     * 兼容旧命令 mid
+     * @param payload
+     * @throws IOException
+     */
+    public void mid(ParsedPayloadDTO payload) throws  IOException {
+        leftSymmetry(payload);
+    }
+
+    /**
+     * 兼容旧命令 mid <args>
+     * @param payload
+     * @param args
+     * @throws IOException
+     */
+    public void mid(ParsedPayloadDTO payload, List<String> args) throws IOException {
+        if (args == null || args.isEmpty() || args.get(0).equals("l")  || args.get(0).equals("left")) {
+            leftSymmetry(payload);
+        } else if (args.get(0).equals("r")  || args.get(0).equals("right")) {
+            rightSymmetry(payload);
+        } else {
+            sender.replyText(payload, "mid 命令支持的参数是 l 或 r，默认 l");
+        }
+    }
+
+    @BotCommand({"rot", "rotate"})
+    public void rotate(ParsedPayloadDTO payload, List<String> args) throws IOException {
+        int angle = 90;
+
+        if (args != null && !args.isEmpty()) {
+            try {
+                angle = Integer.parseInt(args.get(0));
+            } catch (NumberFormatException e) {
+                sender.replyText(payload, "非法的角度参数");
+                return;
+            }
+        }
+
+        while (angle < 0) angle += 360;
+        angle %= 360;
+
+        if (angle != 0 && angle != 90 && angle != 180 && angle != 270) {
+            sender.replyText(payload, "仅支持 90° 整数倍的旋转");
+            return;
+        }
+
+        // 统一提取输入图片
+        List<String> urls = imgService.extractImgUrls(payload, true);
+        if (urls == null || urls.isEmpty()) return;
+
+        if (angle == 0) {
+            sender.sendImage(payload, urls);
+            return;
+        }
+
+        int n = urls.size();
+        List<String> cacheUrlsOrdered = new ArrayList<>(Collections.nCopies(n, null));
+
+        for (int i = 0; i < n; i++) {
+            String url = urls.get(i);
+            byte[] data = imgService.getBytes(url);
+            if (data == null || data.length == 0) continue;
+            String type = imgService.detectImageType(data);
+
+            if ("gif".equals(type)) {
+                // ---- 动态 GIF ----
+                GifData gif = imgService.getGifFlattened(new ByteArrayInputStream(data));
+                if (gif == null) continue;
+                rotateGif(gif, angle);
+                byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
+                String uuid = cacheImageService.cacheImage(outBytes);
+                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+            } else {
+                // ---- 静态图片 ----
+                BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
+                if (img == null) continue;
+                List<BufferedImage> imgs = new ArrayList<>();
+                imgs.add(img);
+                rotateImg(imgs, angle);
                 String uuid = cacheImageService.cacheImage(imgs.get(0), "png");
                 cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
             }
@@ -237,7 +399,7 @@ public class Img {
                         return;
                     }
                 }
-                gifsCutout(gif, threshold);
+                gifCutout(gif, threshold);
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = cacheImageService.cacheImage(outBytes);
                 cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
@@ -346,7 +508,7 @@ public class Img {
             if ("gif".equals(type)) {
                 GifData gif = imgService.getGifFlattened(new ByteArrayInputStream(data));
                 if (gif == null) continue;
-                gifsGray(gif);
+                gifGray(gif);
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = cacheImageService.cacheImage(outBytes);
                 cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
@@ -391,7 +553,7 @@ public class Img {
             if ("gif".equals(type)) {
                 GifData gif = imgService.getGifFlattened(new ByteArrayInputStream(data));
                 if (gif == null) continue;
-                gifsMirror(gif);
+                gifMirror(gif);
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = cacheImageService.cacheImage(outBytes);
                 cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
@@ -611,7 +773,7 @@ public class Img {
         return out;
     }
 
-    private void midLeft(List<BufferedImage> imgs) {
+    private void symmetryByLeft(List<BufferedImage> imgs) {
         for (BufferedImage img : imgs) {
             int width = img.getWidth();
             int height = img.getHeight();
@@ -625,7 +787,7 @@ public class Img {
         }
     }
 
-    public void midRight(List<BufferedImage> imgs) {
+    private void symmetryByRight(List<BufferedImage> imgs) {
         for (BufferedImage img : imgs) {
             int width = img.getWidth();
             int height = img.getHeight();
@@ -639,63 +801,51 @@ public class Img {
         }
     }
 
-    private void gifsMidLeft(List<GifData> gifs) {
-        for (GifData g : gifs) {
-            List<BufferedImage> frames = g.getFrames();
-            for (BufferedImage img : frames) {
-                // 保证 ARGB
-                if (img.getType() != BufferedImage.TYPE_INT_ARGB) {
-                    BufferedImage argb = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_ARGB);
-                    Graphics2D gg = argb.createGraphics();
-                    gg.drawImage(img, 0, 0, null);
-                    gg.dispose();
-                    // replace contents
-                    Graphics2D g2 = img.createGraphics();
-                    g2.setComposite(AlphaComposite.Src);
-                    g2.drawImage(argb, 0, 0, null);
-                    g2.dispose();
-                }
-                int width = img.getWidth();
-                int height = img.getHeight();
-
-                for (int y = 0; y < height; y++) {
-                    for (int x = 0; x < width / 2; x++) {
-                        int leftPixel = img.getRGB(x, y);
-                        img.setRGB(width - x - 1, y, leftPixel);
-                    }
+    private void symmetryByUp(List<BufferedImage> imgs) {
+        for (BufferedImage img : imgs) {
+            int width = img.getWidth();
+            int height = img.getHeight();
+            int half = height / 2;
+            for (int y = 0; y < half; y++) {
+                for (int x = 0; x < width; x++) {
+                    int topPixel = img.getRGB(x, y);
+                    img.setRGB(x, height - y - 1, topPixel);
                 }
             }
         }
     }
 
-    public void gifsMidRight(List<GifData> gifs) {
-        for (GifData g : gifs) {
-            List<BufferedImage> frames = g.getFrames();
-            for (BufferedImage img : frames) {
-                if (img.getType() != BufferedImage.TYPE_INT_ARGB) {
-                    BufferedImage argb = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_ARGB);
-                    Graphics2D gg = argb.createGraphics();
-                    gg.drawImage(img, 0, 0, null);
-                    gg.dispose();
-                    Graphics2D g2 = img.createGraphics();
-                    g2.setComposite(AlphaComposite.Src);
-                    g2.drawImage(argb, 0, 0, null);
-                    g2.dispose();
-                }
-                int width = img.getWidth();
-                int height = img.getHeight();
-
-                for (int y = 0; y < height; y++) {
-                    for (int x = 0; x < width / 2; x++) {
-                        int rightPixel = img.getRGB(width - x - 1, y);
-                        img.setRGB(x, y, rightPixel);
-                    }
+    private void symmetryByDown(List<BufferedImage> imgs) {
+        for (BufferedImage img : imgs) {
+            int width = img.getWidth();
+            int height = img.getHeight();
+            int half = height / 2;
+            for (int y = 0; y < half; y++) {
+                for (int x = 0; x < width; x++) {
+                    int bottomPixel = img.getRGB(x, height - y - 1);
+                    img.setRGB(x, y, bottomPixel);
                 }
             }
         }
     }
 
-    private void gifsCutout(GifData gif, int threshold) {
+    private void gifSymmetryByLeft(List<GifData> gifs) {
+        for (GifData gif : gifs) symmetryByLeft(gif.getFrames());
+    }
+
+    private void gifSymmetryByRight(List<GifData> gifs) {
+        for (GifData gif : gifs) symmetryByRight(gif.getFrames());
+    }
+
+    private void gifSymmetryByUp(List<GifData> gifs) {
+        for (GifData gif : gifs) symmetryByUp(gif.getFrames());
+    }
+
+    private void gifSymmetryByDown(List<GifData> gifs) {
+        for (GifData gif : gifs) symmetryByDown(gif.getFrames());
+    }
+
+    private void gifCutout(GifData gif, int threshold) {
         // 对每一帧单独执行 cutout 算法（与静态图片的处理逻辑对齐）
         int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
         List<BufferedImage> frames = gif.getFrames();
@@ -779,7 +929,7 @@ public class Img {
         }
     }
 
-    private void gifsGray(GifData gif) {
+    private void gifGray(GifData gif) {
         List<BufferedImage> frames = gif.getFrames();
         for (int i = 0; i < frames.size(); i++) {
             BufferedImage img = frames.get(i);
@@ -801,7 +951,7 @@ public class Img {
         }
     }
 
-    private void gifsMirror(GifData gif) {
+    private void gifMirror(GifData gif) {
         List<BufferedImage> frames = gif.getFrames();
         for (BufferedImage img : frames) {
             if (img.getType() != BufferedImage.TYPE_INT_ARGB) {
@@ -826,7 +976,66 @@ public class Img {
         }
     }
 
-    public void toType(ParsedPayloadDTO payload, String type) throws IOException {
+    private BufferedImage rotateImg(BufferedImage img, int angle) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        BufferedImage dst;
+
+        switch (angle) {
+            case 90 -> {
+                dst = new BufferedImage(h, w, BufferedImage.TYPE_INT_ARGB);
+                for (int y = 0; y < h; y++) {
+                    for (int x = 0; x < w; x++) {
+                        dst.setRGB(h - 1 - y, x, img.getRGB(x, y));
+                    }
+                }
+            }
+            case 180 -> {
+                dst = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+                for (int y = 0; y < h; y++) {
+                    for (int x = 0; x < w; x++) {
+                        dst.setRGB(w - 1 - x, h - 1 - y, img.getRGB(x, y));
+                    }
+                }
+            }
+            case 270 -> {
+                dst = new BufferedImage(h, w, BufferedImage.TYPE_INT_ARGB);
+                for (int y = 0; y < h; y++) {
+                    for (int x = 0; x < w; x++) {
+                        dst.setRGB(y, w - 1 - x, img.getRGB(x, y));
+                    }
+                }
+            }
+            default -> throw new IllegalArgumentException("illegal angle argument");
+        }
+
+        return dst;
+    }
+
+    private void rotateImg(List<BufferedImage> imgs, int angle) {
+        imgs.replaceAll(img -> rotateImg(img, angle));
+    }
+
+    private void rotateGif(GifData gif, int angle) {
+        for (int i = 0; i < gif.getFrames().size(); i++) {
+            BufferedImage frame = gif.getFrames().get(i);
+            BufferedImage rotated = rotateImg(frame, angle);
+            gif.getFrames().set(i, rotated);
+        }
+    }
+
+    private void rotateGif(List<GifData> gifs, int angle) {
+        for (GifData gif : gifs) {
+            List<BufferedImage> frames = gif.getFrames();
+            List<BufferedImage> rotated = new ArrayList<>(frames.size());
+            for (BufferedImage frame : frames) {
+                rotated.add(rotateImg(frame, angle));
+            }
+            gif.setFrames(rotated);
+        }
+    }
+
+    private void toType(ParsedPayloadDTO payload, String type) throws IOException {
         List<String> urls = imgService.extractImgUrls(payload, true);
         if (urls == null || urls.isEmpty()) return;
         List<BufferedImage> imgs = imgService.getBufferedImg(urls);

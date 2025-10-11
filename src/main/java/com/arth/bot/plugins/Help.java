@@ -26,7 +26,7 @@ public class Help {
             return;
         }
 
-        ForwardChainBuilder built = forwardChainBuilder.create().addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
+        ForwardChainBuilder building = forwardChainBuilder.create().addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                 这里是 solabot，一只具有独立 java 后端的 bot，本世代为「ickk」，主要为翼遥/风翼烤群而设计，目前支持以下三个模块：
                   1. pjsk 啤酒烧烤
                   2. img 图片处理
@@ -41,7 +41,7 @@ public class Help {
                   - 初始化: 需要权限，初始化数据库"""));
 
         if (payload.getGroupId() == null || payload.getGroupId().equals(619096416L) || payload.getGroupId().equals(1036993047L) || payload.getGroupId().equals(570656202L)) {
-            built.addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
+            building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                     我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                     👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服为例（其实目前也只硬编码了国服，其他服建议用 hrk 的，需要其他服的联系我）："""))
@@ -63,18 +63,18 @@ public class Help {
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                     模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块替换为我们的"""));
         } else {
-            built.addCustomNode(payload.getSelfId(), "bot", n -> n.text("「当前群聊非翼遥/风翼啤酒烧烤大排档，烤森功能不可用」"));
+            building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("「当前群聊非翼遥/风翼啤酒烧烤大排档，烤森功能不可用」"));
         }
 
-        built.addCustomNode(payload.getSelfId(), "bot", n -> n.text(Img.helpText))
+        building.addCustomNode(payload.getSelfId(), "bot", n -> n.text(Img.helpText))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text(Test.helpText));
 
-        String json = (payload.getGroupId() != null) ? built.toGroupJson(payload.getGroupId()) : built.toPrivateJson(payload.getUserId());
+        String json = (payload.getGroupId() != null) ? building.toGroupJson(payload.getGroupId()) : building.toPrivateJson(payload.getUserId());
 
         sender.pushActionJSON(payload.getSelfId(), json);
     }
 
-    private void pluginHelp(ParsedPayloadDTO payload, String pluginName) {
+    protected void pluginHelp(ParsedPayloadDTO payload, String pluginName) {
         if (pluginName == null || pluginName.isEmpty()) {
             index(payload);
             return;
@@ -84,8 +84,12 @@ public class Help {
             Object pluginBean = applicationContext.getBean("plugins." + pluginName);
             Class<?> clazz = pluginBean.getClass();
             Field field = clazz.getField("helpText");
-            String helpTextStr = (String) field.get(null);;
-            sender.replyText(payload, helpTextStr);
+            String helpTextStr = (String) field.get(null);
+            ForwardChainBuilder building = forwardChainBuilder.create()
+                    .addCustomNode(payload.getSelfId(), "bot", n -> n.text("下面是 " + pluginName + " 模块的帮助文本"))
+                    .addCustomNode(payload.getSelfId(), "bot", n -> n.text(helpTextStr));
+            String json = (payload.getGroupId() != null) ? building.toGroupJson(payload.getGroupId()) : building.toPrivateJson(payload.getUserId());
+            sender.pushActionJSON(payload.getSelfId(), json);
         } catch (BeansException e) {
             sender.replyText(payload, "不存在指定 plugin 的 Bean 对象，是否输入了错误的 plugin 名称？");
         } catch (NoSuchFieldException | IllegalAccessException e) {

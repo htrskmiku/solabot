@@ -161,11 +161,8 @@ public class CommandInvoker {
         CommandHolder holder = getPluginHolder(parsed.root());
         Object bean = holder.bean;
 
-        // 直接使用 holder.commandRegistry 的 keySet（已在 init 中 normalize 为小写）
-        Set<String> methodNames = holder.commandRegistry.keySet();
-
         // 将参数序列按已知方法名进行分组，形成执行步骤链
-        List<Step> steps = groupSteps(parsed.subAndArgs(), methodNames);
+        List<Step> steps = groupSteps(parsed.subAndArgs(), holder);
         if (steps.isEmpty()) {
             // 无明确子命令时，默认执行 index 方法作为入口
             steps = List.of(new Step("index", List.of()));
@@ -224,29 +221,67 @@ public class CommandInvoker {
 
     /**
      * 进一步解析命令字符串，将 tokens 解析为子命令与对应的参数
+     * 规则：当遇到一个 token 在 methodNames 中时，判定当前正在收集参数的命令是否允许接受参数；
+     * 如果允许，则把该 token 当作参数；
+     * 否则将其视为新的命令名。
      * @param tokens
-     * @param methodNames  方法名集合（小写），来自 holder.commandRegistry.keySet()
+     * @param holder
      * @return
      */
-    private List<Step> groupSteps(List<String> tokens, Set<String> methodNames) {
+    private List<Step> groupSteps(List<String> tokens, CommandHolder holder) {
         List<Step> out = new ArrayList<>();
-        if (tokens.isEmpty()) return out;
+        if (tokens == null || tokens.isEmpty()) return out;
 
         String curName = null;
         List<String> curArgs = new ArrayList<>();
 
-        for (String tk : tokens) {
+        Set<String> methodNames = holder.commandRegistry.keySet();
+
+        for (int idx = 0; idx < tokens.size(); idx++) {
+            String tk = tokens.get(idx);
             String low = tk.toLowerCase(Locale.ROOT);
+
             if (methodNames.contains(low)) {
-                // 新方法名，规约前一方法的参数
-                if (curName != null) out.add(new Step(curName, List.copyOf(curArgs)));
-                curName = tk;
-                curArgs.clear();
+                // 当前命令不接收参数，贪心匹配新的命令
+                if (curName == null) {
+                    curName = tk;
+                    curArgs.clear();
+                    continue;
+                }
+
+                // 当前已有命令，判断其方法签名是否允许接收参数 List<String> args
+                Method currentMethod;
+                try {
+                    // 根据优先级匹配最适命令
+                    currentMethod = resolveMethod(holder, curName);
+                } catch (CommandNotFoundException e) {
+                    out.add(new Step(curName, List.copyOf(curArgs)));
+                    curName = tk;
+                    curArgs = new ArrayList<>();
+                    continue;
+                }
+
+                boolean acceptsList = false;
+                Class<?>[] ps = currentMethod.getParameterTypes();
+                for (Class<?> p : ps) {
+                    if (List.class.isAssignableFrom(p)) {
+                        acceptsList = true;
+                        break;
+                    }
+                }
+
+                if (acceptsList) {
+                    curArgs.add(tk);
+                } else {
+                    out.add(new Step(curName, List.copyOf(curArgs)));
+                    curName = tk;
+                    curArgs = new ArrayList<>();
+                }
             } else {
-                // 非方法名，规约为当前方法的参数
                 curArgs.add(tk);
             }
         }
+
         if (curName != null) out.add(new Step(curName, List.copyOf(curArgs)));
         return out;
     }

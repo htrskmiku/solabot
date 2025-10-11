@@ -11,7 +11,7 @@ public interface ForwardChainBuilder {
 
     ForwardChainBuilder addRefNode(long messageId);
 
-    ForwardChainBuilder addCustomNode(long uin, String name, Consumer<ForwardChainBuilder.NodeContent> builder);
+    ForwardChainBuilder addCustomNode(long userId, String nickname, Consumer<ForwardChainBuilder.NodeContent> builder);
 
     String toGroupJson(long groupId);
 
