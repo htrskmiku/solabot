@@ -40,7 +40,7 @@ public class Help {
                   - msm: 查看所绑定的 mysekai 数据
                   - 初始化: 需要权限，初始化数据库"""));
 
-        if (payload.getGroupId().equals(619096416L) || payload.getGroupId().equals(1036993047L) || payload.getGroupId().equals(570656202L)) {
+        if (payload.getGroupId() == null || payload.getGroupId().equals(619096416L) || payload.getGroupId().equals(1036993047L) || payload.getGroupId().equals(570656202L)) {
             built.addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                     我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""

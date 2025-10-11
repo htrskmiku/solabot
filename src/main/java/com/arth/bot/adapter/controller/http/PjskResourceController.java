@@ -1,4 +1,4 @@
-package com.arth.bot.adapter.controller;
+package com.arth.bot.adapter.controller.http;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -15,7 +15,7 @@ import java.nio.file.Path;
 
 @RestController
 @RequestMapping("/pjsk/resource")
-public class PjskHttpController {
+public class PjskResourceController {
 
     /* 烤森资源透视地图 */
     @GetMapping("/{region}/mysekai/{id}/map")

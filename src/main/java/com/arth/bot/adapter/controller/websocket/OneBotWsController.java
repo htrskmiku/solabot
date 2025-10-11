@@ -1,8 +1,7 @@
-package com.arth.bot.adapter.controller;
+package com.arth.bot.adapter.controller.websocket;
 
 import com.arth.bot.adapter.fetcher.EchoWaiter;
 import com.arth.bot.adapter.parser.PayloadParser;
-import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.session.SessionRegistry;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.invoker.CommandInvoker;
@@ -16,9 +15,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 @Slf4j
 @Controller
@@ -28,7 +25,6 @@ public class OneBotWsController extends TextWebSocketHandler {
     private final SessionRegistry sessionRegistry;
     private final ExecutorService executorService;
     private final CommandInvoker commandInvoker;
-    private final Sender sender;
     private final PayloadParser payloadParser;
     private final ObjectMapper objectMapper;
     private final EchoWaiter echoWaiter;
@@ -107,6 +103,9 @@ public class OneBotWsController extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         Object sid = session.getAttributes().get("self_id");
         if (sid instanceof Long selfId) sessionRegistry.remove(selfId);
-        log.info("[adapter] ws closed: {}", session.getId());
+        int code = status.getCode();
+        String reason = status.getReason();
+        // 有些时候并不是我们主动断开的，可能是缓冲区溢出等问题，例如 code 1009
+        log.info("[adapter] ws closed: {}, code: {}, reason: {}", session.getId(), code, reason);
     }
 }

@@ -1,4 +1,4 @@
-package com.arth.bot.adapter.controller;
+package com.arth.bot.adapter.controller.http;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
@@ -18,7 +18,7 @@ import java.time.Duration;
 @RestController
 @RequestMapping("/cache/resource")
 @RequiredArgsConstructor
-public class CacheHttpController {
+public class CachedResourceController {
 
     private final RedisTemplate<String, byte[]> redisTemplate;
 
