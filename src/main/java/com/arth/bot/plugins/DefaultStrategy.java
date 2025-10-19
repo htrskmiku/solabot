@@ -2,14 +2,12 @@ package com.arth.bot.plugins;
 
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import jakarta.annotation.Resource;
 
-@Component
-@RequiredArgsConstructor
 public class DefaultStrategy {
 
-    private final Sender sender;
+    @Resource
+    private Sender sender;
 
     /**
      * 若未匹配到命令，执行该默认策略

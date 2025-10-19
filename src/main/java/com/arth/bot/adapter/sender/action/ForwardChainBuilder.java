@@ -18,8 +18,11 @@ public interface ForwardChainBuilder {
     String toPrivateJson(long userId);
 
     interface NodeContent {
+
         NodeContent text(String text);
+
         NodeContent image(String file);
+
         NodeContent at(long qq);
     }
 }

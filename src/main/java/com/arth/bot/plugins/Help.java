@@ -3,35 +3,30 @@ package com.arth.bot.plugins;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.ForwardChainBuilder;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
+import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Field;
+import java.util.List;
 
-@Component("plugins.help")
 @BotPlugin({"help"})
 @RequiredArgsConstructor
-public class Help {
+public class Help extends Plugin {
 
     private final Sender sender;
     private final ForwardChainBuilder forwardChainBuilder;
-    private final ApplicationContext applicationContext;
 
+    @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
-        if (payload.getCommandText().matches("/help\\s+\\S+")) {
-            pluginHelp(payload, payload.getCommandText().substring(6));
-            return;
-        }
-
         ForwardChainBuilder building = forwardChainBuilder.create().addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                这里是 solabot，一只具有独立 java 后端的 bot，本世代为「ickk」，主要为翼遥/风翼烤群而设计，目前支持以下三个模块：
+                这里是 solabot，一只具有独立 java 后端的 bot，本世代为「ickk」，主要为翼遥烤群（某高校 pjsk 同好群）而设计，目前支持以下三个模块：
                   1. pjsk 啤酒烧烤
                   2. img 图片处理
-                  3. test 测试
-                命令的使用方法为 “/模块名 命令名 <参数>”，示例：/pjsk 绑定；
+                  3. 看看
+                  4. test 测试
+                
+                命令的使用方法为 “/模块名 命令名 <参数>”，例如 /pjsk 绑定，注意有空格；
+                
                 可以通过 “/help 模块名” 或 “/模块名 help” 单独查看指定模块的帮助文档"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                 pjsk 啤酒烧烤模块目前支持以下命令：
@@ -63,37 +58,31 @@ public class Help {
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                     模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块替换为我们的"""));
         } else {
-            building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("「当前群聊非翼遥/风翼啤酒烧烤大排档，烤森功能不可用」"));
+            building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("「当前群聊非翼遥啤酒烧烤大排档，烤森功能不可用，pjsk 模块剩余内容略」"));
         }
 
-        building.addCustomNode(payload.getSelfId(), "bot", n -> n.text(Img.helpText))
-                .addCustomNode(payload.getSelfId(), "bot", n -> n.text(Test.helpText));
+        building.addCustomNode(payload.getSelfId(), "bot", n -> n.text(pluginRegistry.getPluginHelpText("Img")))
+                .addCustomNode(payload.getSelfId(), "bot", n -> n.text(pluginRegistry.getPluginHelpText("看")))
+                .addCustomNode(payload.getSelfId(), "bot", n -> n.text(pluginRegistry.getPluginHelpText("Test")));
 
         String json = (payload.getGroupId() != null) ? building.toGroupJson(payload.getGroupId()) : building.toPrivateJson(payload.getUserId());
 
         sender.pushActionJSON(payload.getSelfId(), json);
     }
 
-    protected void pluginHelp(ParsedPayloadDTO payload, String pluginName) {
-        if (pluginName == null || pluginName.isEmpty()) {
-            index(payload);
-            return;
+    @BotCommand("index")
+    public void index(ParsedPayloadDTO payload, List<String> args) {
+        for (String arg : args) {
+            pluginRegistry.callPluginHelp(payload, arg);
         }
+    }
 
-        try {
-            Object pluginBean = applicationContext.getBean("plugins." + pluginName);
-            Class<?> clazz = pluginBean.getClass();
-            Field field = clazz.getField("helpText");
-            String helpTextStr = (String) field.get(null);
-            ForwardChainBuilder building = forwardChainBuilder.create()
-                    .addCustomNode(payload.getSelfId(), "bot", n -> n.text("下面是 " + pluginName + " 模块的帮助文本"))
-                    .addCustomNode(payload.getSelfId(), "bot", n -> n.text(helpTextStr));
-            String json = (payload.getGroupId() != null) ? building.toGroupJson(payload.getGroupId()) : building.toPrivateJson(payload.getUserId());
-            sender.pushActionJSON(payload.getSelfId(), json);
-        } catch (BeansException e) {
-            sender.replyText(payload, "不存在指定 plugin 的 Bean 对象，是否输入了错误的 plugin 名称？");
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            sender.replyText(payload, "尝试获取 plugin 的 Bean 对象帮助文档字段时抛出了反射异常");
-        }
+    public void help(ParsedPayloadDTO payload) {
+
+    }
+
+    @Override
+    public String getHelpText() {
+        return "";
     }
 }

@@ -6,12 +6,13 @@ import com.arth.bot.adapter.util.ImgService.GifData;
 import com.arth.bot.core.cache.service.CacheImageService;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
+import com.arth.bot.core.invoker.PluginRegistry;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import javax.imageio.*;
 import javax.imageio.metadata.IIOMetadata;
@@ -25,15 +26,13 @@ import java.io.IOException;
 import java.util.*;
 import java.util.List;
 
-@Component("plugins.img")
 @BotPlugin({"img"})
 @RequiredArgsConstructor
-public class Img {
+public class Img extends Plugin {
 
     private final Sender sender;
     private final ImgService imgService;
     private final CacheImageService cacheImageService;
-    private final Help helpPlugin;
 
     private static final int GIF_MIN_CS = 2;      // GIF 最小播放时间间隔
     private static final int GIF_MAX_CS = 65535;  // GIF 最大播放时间间隔
@@ -46,7 +45,9 @@ public class Img {
 
     private String baseUrl;
 
-    public static final String helpText = """
+    @Getter
+    public final String helpText = """
+                        命令使用示例：/img l
                         img 图片处理模块目前支持以下命令：
                           - l 或 left: 镜像对称，左对称
                           - r 或 right: 镜像对称，右对称
@@ -55,7 +56,7 @@ public class Img {
                           - rotate <90整数倍>：顺时针旋转，默认90°
                           - speed <n>: 加速 gif 为 n 倍
                             n 可以为负数，表示倒放
-                          - cutout: 纯色背景抠图透明底
+                          - cut: 纯色背景抠图透明底
                             可以跟 <阈值> 参数指定阈值，默认100，阈值表示像素与背景RGB欧氏距离的最大均方误差
                           - gray: 转灰度图
                           - mirror: 水平镜像翻转
@@ -69,12 +70,14 @@ public class Img {
         this.baseUrl = "http://" + clientAccessUrl + ":" + port;
     }
 
+    @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
         sender.replyText(payload, "具体的图片处理命令是什么呢？");
     }
 
+    @BotCommand("help")
     public void help(ParsedPayloadDTO payload) {
-        helpPlugin.pluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
+        pluginRegistry.callPluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
     }
 
     @BotCommand({"l", "left"})
@@ -238,6 +241,7 @@ public class Img {
      * @param payload
      * @throws IOException
      */
+    @BotCommand("mid")
     public void mid(ParsedPayloadDTO payload) throws  IOException {
         leftSymmetry(payload);
     }
@@ -248,6 +252,7 @@ public class Img {
      * @param args
      * @throws IOException
      */
+    @BotCommand("mid")
     public void mid(ParsedPayloadDTO payload, List<String> args) throws IOException {
         if (args == null || args.isEmpty() || args.get(0).equals("l")  || args.get(0).equals("left")) {
             leftSymmetry(payload);
@@ -322,6 +327,7 @@ public class Img {
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
+    @BotCommand("speed")
     public void speed(ParsedPayloadDTO payload, List<String> args) throws IOException {
         if (args == null || args.isEmpty()) {
             sender.replyText(payload, "没有指定加速 / 减速倍率哦");
@@ -364,6 +370,7 @@ public class Img {
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
+    @BotCommand({"cut", "cutout"})
     public void cutout(ParsedPayloadDTO payload, List<String> args) throws IOException {
         int threshold = 100;
 
@@ -493,6 +500,7 @@ public class Img {
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
+    @BotCommand("gray")
     public void gray(ParsedPayloadDTO payload) throws IOException {
         List<String> urls = imgService.extractImgUrls(payload, true);
         if (urls == null || urls.isEmpty()) return;
@@ -538,6 +546,7 @@ public class Img {
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
+    @BotCommand("mirror")
     public void mirror(ParsedPayloadDTO payload) throws IOException {
         List<String> urls = imgService.extractImgUrls(payload, true);
         if (urls == null || urls.isEmpty()) return;
@@ -583,14 +592,17 @@ public class Img {
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 
+    @BotCommand("gif")
     public void gif(ParsedPayloadDTO payload) throws IOException {
         toType(payload, "gif");
     }
 
+    @BotCommand("png")
     public void png(ParsedPayloadDTO payload) throws IOException {
         toType(payload, "png");
     }
 
+    @BotCommand("check")
     public void check(ParsedPayloadDTO payload) {
         List<String> urls = imgService.extractImgUrls(payload, true);
         if (urls == null || urls.isEmpty()) {

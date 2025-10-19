@@ -3,7 +3,7 @@ server:
   port: 8848
 
 app:
-  client-access-url: "${CLIENT_ACCESS_URL:localhost}"
+  client-access-url: "${CLIENT_ACCESS_URL:192.168.1.3}"
 
 logging:
   level:

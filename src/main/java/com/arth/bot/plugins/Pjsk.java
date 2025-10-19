@@ -13,9 +13,9 @@ import com.arth.bot.core.invoker.annotation.BotPlugin;
 import com.arth.bot.core.database.mapper.PjskBindingMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,10 +27,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
-@Component("plugins.pjsk")
 @BotPlugin({"pjsk"})
 @RequiredArgsConstructor
-public class Pjsk {
+public class Pjsk extends Plugin {
 
     private final Sender sender;
     private final ActionChainBuilder actionChainBuilder;
@@ -47,22 +46,25 @@ public class Pjsk {
 
     private String baseUrl;
 
-    public static final String helpText = "请通过 /help 查看 pjsk 模块具体的命令";
+    @Getter
+    public final String helpText = "请通过 /help 查看 pjsk 模块具体的命令";
 
     @PostConstruct
     public void init() {
         this.baseUrl = "http://" + clientAccessUrl + ":" + port;
     }
 
+    @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
         sender.replyText(payload, "请接 pjsk 模块的具体命令哦");
     }
 
+    @BotCommand("help")
     public void help(ParsedPayloadDTO payload) {
         sender.replyText(payload, helpText);
     }
 
-    @BotCommand({"绑定"})
+    @BotCommand({"绑定", "bind"})
     public void bind(ParsedPayloadDTO payload, List<String> args) {
         if (args.isEmpty()) {
             bound(payload);
@@ -98,7 +100,7 @@ public class Pjsk {
         }
     }
 
-    @BotCommand({"查询绑定"})
+    @BotCommand({"查询绑定", "bound"})
     public void bound(ParsedPayloadDTO payload) {
         long userId = payload.getUserId();
         Long groupId = payload.getGroupId();
@@ -153,12 +155,8 @@ public class Pjsk {
         sender.pushActionJSON(payload.getSelfId(), json);
     }
 
-    @BotCommand({"初始化"})
-    @DirectAuthInterceptor(
-            scope = AuthScope.USER,
-            mode  = AuthMode.ALLOW,
-            targets = "1093664084"
-    )
+    @BotCommand({"初始化", "initUserBinding", "init"})
+    @DirectAuthInterceptor(scope = AuthScope.USER, mode  = AuthMode.ALLOW, targets = "1093664084")
     public void initUserBinding(ParsedPayloadDTO payload) {
         PjskBinding a = new PjskBinding();
         a.setPjskId("7485938033569569588");
@@ -199,16 +197,29 @@ public class Pjsk {
 
         }
 
-        // 测试用
         PjskBinding d = new PjskBinding();
-        d.setPjskId("123");
-        d.setUserId(1093664084L);
+        d.setPjskId("7486314772426939173");
+        d.setUserId(984097301L);
         d.setGroupId(793709714L);
         d.setServerRegion("xx");
         d.setCreatedAt(new Date());
         d.setUpdatedAt(new Date());
         try {
             pjskBindingMapper.insert(d);
+        } catch (Exception ignored) {
+
+        }
+
+        // 测试用
+        PjskBinding e = new PjskBinding();
+        e.setPjskId("123");
+        e.setUserId(1093664084L);
+        e.setGroupId(793709714L);
+        e.setServerRegion("xx");
+        e.setCreatedAt(new Date());
+        e.setUpdatedAt(new Date());
+        try {
+            pjskBindingMapper.insert(e);
         } catch (Exception ignored) {
 
         }

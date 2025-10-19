@@ -46,20 +46,8 @@ public class BusinessExceptionHandlerAspect {
     public Object around(ProceedingJoinPoint joinPoint, ParsedPayloadDTO payload) throws Throwable {
         try {
             return joinPoint.proceed();
-        } catch (PermissionDeniedException e) {
-            log.debug("[core: business exception] permission denied: {}", e.getMessage());
-            sendBusinessExceptionBack(e, payload);
-            return null;
-        } catch (InvalidCommandArgsException e) {
-            log.debug("[core: business exception] invalid command args: {}", e.getMessage());
-            sendBusinessExceptionBack(e, payload);
-            return null;
-        } catch (CommandNotFoundException e) {
-            log.debug("[core: business exception] command not found: {}", e.getMessage());
-            sendBusinessExceptionBack(e, payload);
-            return null;
         } catch (BusinessException e) {
-            log.warn("[core: business exception] business error: {}", e.getMessage(), e);
+            log.warn("[core: business exception] " + e.getErrorCode() + ": {}", e.getMessage(), e);
             return null;
         }
     }

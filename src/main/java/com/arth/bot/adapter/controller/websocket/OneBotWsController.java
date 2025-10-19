@@ -64,7 +64,7 @@ public class OneBotWsController extends TextWebSocketHandler {
                 /* 多线程异步解析命令 */
                 executorService.execute(() -> {
                     try {
-                        commandInvoker.parseAndInvoke(dto);
+                        commandInvoker.invokeByPayload(dto);
                     } catch (Exception e) {
                         log.error("[adapter] async handle error", e);
                     }

@@ -44,7 +44,7 @@ public class OneBotForwardChainBuilder implements ForwardChainBuilder {
      */
     @Override
     public ForwardChainBuilder addCustomNode(long userId, String nickname, Consumer<ForwardChainBuilder.NodeContent> builder) {
-        OneBotForwardChainBuilder.NodeContent nc = new OneBotForwardChainBuilder.NodeContent();
+        OneBotForwardChainBuilder.NodeContent nc = new NodeContent();
         builder.accept(nc);
 
         Map<String, Object> data = new HashMap<>();

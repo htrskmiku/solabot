@@ -10,23 +10,23 @@ import com.arth.bot.core.authorization.model.AuthScope;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
 import com.arth.bot.core.common.dto.replay.ImageRef;
+import com.arth.bot.core.invoker.PluginRegistry;
+import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Objects;
 
 @BotPlugin({"test"})
-@Component("plugins.test")
 @RequiredArgsConstructor
-public class Test {
+public class Test extends Plugin {
 
     private final Sender sender;
     private final ForwardChainBuilder forwardChainBuilder;
     private final ReplyFetcher replyFetcher;
-    private final Help helpPlugin;
 
     @Value("${server.port}")
     private String port;
@@ -34,7 +34,8 @@ public class Test {
     @Value("${app.client-access-url}")
     private String clientAccessUrl;
 
-    public static final String helpText = """
+    @Getter
+    public final String helpText = """
                         test 测试模块目前支持以下命令：
                           - quanxian: 测试鉴权切面，硬编码仅允许 1093664084
                           - zuse <delay_time>: 测试多线程异步
@@ -44,14 +45,21 @@ public class Test {
                           - zhuanfa <QQid> <QQname> <text>: 测试链式构造合并转发消息
                           - yinyong <args...>: 测试 bot 获取图片引用消息""";
 
+    @Override
+    public void index(ParsedPayloadDTO payload) {
+        sender.replyText(payload, "未给出具体的 test 模块命令，或命令有误");
+    }
+
+    @BotCommand("help")
     public void help(ParsedPayloadDTO payload) {
-        helpPlugin.pluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
+        pluginRegistry.callPluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
     }
 
     /**
      * 权限测试
      * @param payload
      */
+    @BotCommand("quanxian")
     @DirectAuthInterceptor(
             scope = AuthScope.USER,
             mode  = AuthMode.ALLOW,
@@ -66,6 +74,7 @@ public class Test {
      * 参数解析测试
      * @param payload
      */
+    @BotCommand("zuse")
     public void zuse(ParsedPayloadDTO payload, List<String> args) {
         long ms = 5000L;  // 默认延迟 5 秒
         try {
@@ -86,6 +95,7 @@ public class Test {
      * 回复功能测试
      * @param payload
      */
+    @BotCommand("huifu")
     public void huifu(ParsedPayloadDTO payload) {
         sender.replyText(payload, "test");
     }
@@ -93,6 +103,7 @@ public class Test {
     /**
      * 图片发送测试
      */
+    @BotCommand("tu")
     public void tu(ParsedPayloadDTO payload) {
         String url = "http://" + clientAccessUrl + ":" + port + "/saki.jpg";
         sender.replyImage(payload, List.of(url, url, url));
@@ -102,6 +113,7 @@ public class Test {
      * 视频发送测试
      * @param payload
      */
+    @BotCommand("shipin")
     public void shipin(ParsedPayloadDTO payload) {
         String url = "http://" + clientAccessUrl + ":" + port + "/icsk.mp4";
         sender.sendVideo(payload, url);
@@ -111,6 +123,7 @@ public class Test {
      * 生成转发消息测试
      * @param payload
      */
+    @BotCommand("zhuanfa")
     public void zhuanfa(ParsedPayloadDTO payload, List<String> args) {
         long idd = Long.parseLong(args.get(0));
         ForwardChainBuilder built = forwardChainBuilder.create()
@@ -126,6 +139,7 @@ public class Test {
      * 测试 bot 获取非文本引用消息
      * @param payload
      */
+    @BotCommand("yinyong")
     public void yinyong(ParsedPayloadDTO payload) {
         String replyMsgId = payload.getReplyToMessageId();
         if (replyMsgId == null || replyMsgId.isBlank()) {
@@ -164,6 +178,7 @@ public class Test {
      * 测试 bot 获取参数
      * @param payload
      */
+    @BotCommand("canshu")
     public void canshu(ParsedPayloadDTO payload, List<String> args) {
         sender.replyText(payload, args.toString());
     }
