@@ -17,7 +17,7 @@ public class KanNiao extends Plugin {
 
     @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
-        sender.sendImage(payload, galleryCacheService.getRandomPicUrl("鸟"));
+        sender.sendImage(payload, galleryCacheService.getRandomPicUrl("鸟图"));
     }
 
     @BotCommand("help")

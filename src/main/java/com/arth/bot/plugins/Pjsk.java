@@ -15,6 +15,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
+@Slf4j
 @BotPlugin({"pjsk"})
 @RequiredArgsConstructor
 public class Pjsk extends Plugin {
@@ -126,7 +128,8 @@ public class Pjsk extends Plugin {
         String pjskId = binding.getPjskId();
         String region = binding.getServerRegion();
 
-        Path file = Path.of(System.getProperty("user.dir") + "/dynamic/pjsk_user_data/mysekai/draw/map/" + "cn" + "_" + pjskId + ".png");
+        // Path file = Path.of(System.getProperty("user.dir") + "/dynamic/pjsk_user_data/mysekai/draw/map/" + "cn" + "_" + pjskId + ".png");
+        Path file = findPjskFileTMP(pjskId);
         String updatedTime = null;
 
         if (!Files.exists(file)) {
@@ -142,17 +145,46 @@ public class Pjsk extends Plugin {
             }
         }
 
-        String overviewImgUrl = baseUrl + "/pjsk/resource/cn/mysekai/" + pjskId + "/overview";
-        String mapImgUrl = baseUrl + "/pjsk/resource/cn/mysekai/" + pjskId + "/map";
+        region = file.getFileName().toString().substring(0, 2);
+        String overviewImgUrl = baseUrl + "/pjsk/resource/" + region + "/mysekai/" + pjskId + "/overview";
+        String mapImgUrl = baseUrl + "/pjsk/resource/" + region + "/mysekai/" + pjskId + "/map";
 
         ActionChainBuilder builder = actionChainBuilder.create().setReplay(payload.getMessageId())
                 .text("MySekai 数据更新于" + updatedTime)
                 .image(overviewImgUrl)
                 .image(mapImgUrl);
 
-        String json = payload.getMessageType().equals("group") ? builder.toGroupJson(payload.getGroupId()) : builder.toPrivateJson(payload.getUserId());
+        String json = payload.getMessageType().equals("group") ?
+                builder.toGroupJson(payload.getGroupId()) :
+                builder.toPrivateJson(payload.getUserId());
 
         sender.pushActionJSON(payload.getSelfId(), json);
+    }
+
+    /**
+     * 临时性方法，能跑就行 TMP
+     * @param pjskId
+     * @return
+     */
+    @Deprecated
+    private Path findPjskFileTMP(String pjskId) {
+        String dirPath = System.getProperty("user.dir") + "/dynamic/pjsk_user_data/mysekai/draw/map/";
+        Path directory = Path.of(dirPath);
+        if (!Files.exists(directory) || !Files.isDirectory(directory)) {
+            return null;
+        }
+        try {
+            return Files.list(directory)
+                    .filter(file -> {
+                        String fileName = file.getFileName().toString();
+                        return fileName.matches("[a-z]{2}_" + pjskId + "\\.png");
+                    })
+                    .findFirst()
+                    .orElse(null);
+        } catch (IOException e) {
+            log.error("没有找到指定的数据", e);
+            return null;
+        }
     }
 
     @BotCommand({"初始化", "initUserBinding", "init"})
@@ -210,14 +242,27 @@ public class Pjsk extends Plugin {
 
         }
 
-        // 测试用
         PjskBinding e = new PjskBinding();
-        e.setPjskId("123");
-        e.setUserId(1093664084L);
+        e.setPjskId("7489244575534537481");
+        e.setUserId(1461762986L);
         e.setGroupId(793709714L);
         e.setServerRegion("xx");
         e.setCreatedAt(new Date());
         e.setUpdatedAt(new Date());
+        try {
+            pjskBindingMapper.insert(e);
+        } catch (Exception ignored) {
+
+        }
+
+        // 测试用
+        PjskBinding f = new PjskBinding();
+        f.setPjskId("123");
+        f.setUserId(1093664084L);
+        f.setGroupId(793709714L);
+        f.setServerRegion("xx");
+        f.setCreatedAt(new Date());
+        f.setUpdatedAt(new Date());
         try {
             pjskBindingMapper.insert(e);
         } catch (Exception ignored) {

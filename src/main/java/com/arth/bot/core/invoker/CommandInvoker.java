@@ -7,7 +7,6 @@ import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.plugins.DefaultStrategy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -188,18 +187,18 @@ public class CommandInvoker {
      * @return
      */
     private CommandHandler chooseBest(List<CommandHandler> cands, ParsedPayloadDTO payload, List<String> args) {
-        // 运行期择优：基于“是否带参”对接参/不接参的处理器进行轻/重权重偏置
+        // 运行期择优：基于 “是否带参” 对接参/不接参的处理器进行轻/重权重偏置
         boolean hasArgs = args != null && !args.isEmpty();
         int best = Integer.MIN_VALUE;
         CommandHandler bestH = null;
         for (CommandHandler h : cands) {
             int s = h.score(payload, args);
             if (hasArgs && !h.acceptsArgs()) {
-                s -= 1000; // 带参但处理器不接参：强烈惩罚
+                s -= 1000; // 带参但处理器不接参，狠狠惩罚
             } else if (!hasArgs && h.acceptsArgs()) {
-                s -= 10;   // 无参但处理器接参：轻微惩罚
+                s -= 100;   // 无参但处理器接参，惩罚
             } else {
-                s += 10;   // 匹配期望：轻微加分
+                s += 10;   // 匹配期望，加分
             }
             if (s > best) {
                 best = s;
@@ -239,7 +238,7 @@ public class CommandInvoker {
         CommandHandler preferred = holder.getPreferred(aliasLower);
         if (preferred != null) return preferred.acceptsArgs();
         List<CommandHandler> candidates = getCandidatesWithIndexFallback(holder, aliasLower);
-        if (candidates == null || candidates.isEmpty()) return false;
+        if (candidates.isEmpty()) return false;
         for (CommandHandler h : candidates) {
             if (h.acceptsArgs()) return true;
         }
