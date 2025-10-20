@@ -10,7 +10,6 @@ import com.arth.bot.core.authorization.model.AuthScope;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
 import com.arth.bot.core.common.dto.replay.ImageRef;
-import com.arth.bot.core.invoker.PluginRegistry;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import lombok.Getter;

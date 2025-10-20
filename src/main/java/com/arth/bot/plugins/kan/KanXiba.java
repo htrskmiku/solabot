@@ -8,16 +8,16 @@ import com.arth.bot.core.invoker.annotation.BotPlugin;
 import com.arth.bot.plugins.Plugin;
 import lombok.RequiredArgsConstructor;
 
-@BotPlugin({"看miku"})
+@BotPlugin({"看西八"})
 @RequiredArgsConstructor
-public class KanMiku extends Plugin {
+public class KanXiba extends Plugin {
 
     private final Sender sender;
     private final GalleryCacheService galleryCacheService;
 
     @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
-        sender.sendImage(payload, galleryCacheService.getRandomPicUrl("miku"));
+        sender.sendImage(payload, galleryCacheService.getRandomPicUrl("西八"));
     }
 
     @BotCommand("help")

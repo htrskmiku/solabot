@@ -6,7 +6,6 @@ import com.arth.bot.adapter.util.ImgService.GifData;
 import com.arth.bot.core.cache.service.CacheImageService;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
-import com.arth.bot.core.invoker.PluginRegistry;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import jakarta.annotation.PostConstruct;
