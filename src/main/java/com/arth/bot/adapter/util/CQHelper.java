@@ -9,7 +9,7 @@ import com.arth.bot.core.common.dto.replay.ImageRef;
 import com.arth.bot.core.common.dto.replay.MediaSourceType;
 import com.arth.bot.core.common.dto.replay.VideoRef;
 
-public final class CQHelper {
+public class CQHelper {
 
     private CQHelper() {}
 

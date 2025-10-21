@@ -39,7 +39,7 @@ public class CommandInvoker {
             if (parsed == null) return null;
 
             String parsedRoot = parsed.root();
-            log.debug("[core.invoker] command detected: {}", parsedRoot);
+            log.info("[core.invoker] plugin calling detected: {}", parsedRoot);
 
             PluginHolder holder = resolvePluginHolder(parsedRoot);
             List<Step> steps = groupSteps(parsed.subAndArgs(), holder);

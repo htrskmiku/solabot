@@ -1,12 +1,9 @@
-package com.arth.bot.core.common.exception.aop;
+package com.arth.bot.core.common.exception.handler;
 
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.session.SessionRegistry;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.BusinessException;
-import com.arth.bot.core.common.exception.CommandNotFoundException;
-import com.arth.bot.core.common.exception.InvalidCommandArgsException;
-import com.arth.bot.core.common.exception.PermissionDeniedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -42,7 +39,7 @@ public class BusinessExceptionHandlerAspect {
      * @return
      * @throws Throwable
      */
-    @Around("execution(* com.arth.bot.core.invoker.CommandInvoker.parseAndInvoke(..)) && args(payload)")
+    @Around("execution(* com.arth.bot.core.invoker.CommandInvoker.invokeByPayload(..)) && args(payload)")
     public Object around(ProceedingJoinPoint joinPoint, ParsedPayloadDTO payload) throws Throwable {
         try {
             return joinPoint.proceed();

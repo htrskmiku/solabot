@@ -92,7 +92,7 @@ public class GalleryCacheService {
             }
             return resp.getBody();
         } catch (RestClientException e) {
-            log.error("error fetching image {}: {}", url, e.getMessage());
+            log.error("[core.cache] error fetching image {}: {}", url, e.getMessage());
             throw new ExternalServiceErrorException("error fetching image from remote API: " + url);
         }
     }
@@ -131,11 +131,11 @@ public class GalleryCacheService {
                     new ParameterizedTypeReference<>() {});
             galleries = response.getBody();
             if (galleries == null || galleries.isEmpty()) {
-                log.warn("remote gallery API returned empty body");
+                log.warn("[core.cache] remote gallery API returned empty body");
                 return;
             }
         } catch (Exception e) {
-            log.error("failed to fetch gallery metadata from remote API: {}", e.getMessage());
+            log.error("[core.cache] failed to fetch gallery metadata from remote API: {}", e.getMessage());
             return;
         }
 
@@ -169,7 +169,7 @@ public class GalleryCacheService {
                     oldKeys.add(sortedSetKey);
                     redisTemplate.delete(oldKeys);
                 } catch (Exception e) {
-                    log.warn("failed to delete old keys for role {}: {}", role, e.getMessage());
+                    log.warn("[core.cache] failed to delete old keys for role {}: {}", role, e.getMessage());
                     // 继续执行写入，避免中断
                 }
 
@@ -190,7 +190,7 @@ public class GalleryCacheService {
                                     serializer.serialize(picJson));
                         } catch (JsonProcessingException e) {
                             // 序列化失败时跳过该项
-                            log.warn("serialize pic error for role={}, pid={}, cause={}", role, pid, e.getMessage());
+                            log.warn("[core.cache] serialize pic error for role={}, pid={}, cause={}", role, pid, e.getMessage());
                         }
 
                         // ZADD sortedSetKey score pid
@@ -214,7 +214,7 @@ public class GalleryCacheService {
                     redisTemplate.expire(finalHashKey, ttlSeconds, TimeUnit.SECONDS);
                     redisTemplate.expire(finalSortedSetKey, ttlSeconds, TimeUnit.SECONDS);
                 } catch (Exception e) {
-                    log.warn("failed to set TTL for role {} keys: {}", role, e.getMessage());
+                    log.warn("[core.cache] failed to set TTL for role {} keys: {}", role, e.getMessage());
                 }
 
             } finally {
@@ -234,7 +234,7 @@ public class GalleryCacheService {
                             return null;
                         });
                     } catch (Exception e) {
-                        log.warn("failed to release lock {} safely: {}", lockKey, e.getMessage());
+                        log.warn("[core.cache] failed to release lock {} safely: {}", lockKey, e.getMessage());
                     }
                 }
             }
@@ -248,16 +248,10 @@ public class GalleryCacheService {
             redisTemplate.opsForValue().set(GALLERY_GLOBAL_MARKER, String.valueOf(System.currentTimeMillis()));
             redisTemplate.expire(GALLERY_GLOBAL_MARKER, globalTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.warn("failed to set global gallery marker TTL: {}", e.getMessage());
+            log.warn("[core.cache] failed to set global gallery marker TTL: {}", e.getMessage());
         }
 
         log.info("[core.cache] updated gallery cache successfully");
-
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ignore) {
-
-        }
     }
 
     /**

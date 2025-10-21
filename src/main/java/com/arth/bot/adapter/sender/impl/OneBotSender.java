@@ -15,11 +15,9 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -35,6 +33,8 @@ public class OneBotSender implements Sender {
     private final ConcurrentHashMap<String, CompletableFuture<JsonNode>> pending = new ConcurrentHashMap<>();
     private final EchoWaiter echoWaiter;
 
+    private static final int PARTIAL_MESSAGE_MAX_CHAR_NUM = 300_000;
+
     @Override
     public void sendText(ParsedPayloadDTO payload, Object text) {
         WebSocketSession session = sessions.get(payload.getSelfId());
@@ -47,7 +47,7 @@ public class OneBotSender implements Sender {
                 sendTextOnce(session, payload, text);
             }
         } catch (Exception e) {
-            log.warn("[adapter] send text failed", e);
+            log.warn("[adapter.sender] send text failed", e);
         }
     }
 
@@ -58,12 +58,12 @@ public class OneBotSender implements Sender {
 
         try {
             if (text instanceof Iterable<?> it) {
-                for (Object o : it) responseTextOnce(session, payload, o);
+                for (Object o : it) replyTextOnce(session, payload, o);
             } else {
-                responseTextOnce(session, payload, text);
+                replyTextOnce(session, payload, text);
             }
         } catch (Exception e) {
-            log.warn("[adapter] send text failed", e);
+            log.warn("[adapter.sender] send text failed", e);
         }
     }
 
@@ -95,10 +95,11 @@ public class OneBotSender implements Sender {
                         : simpleActionBuilder.buildPrivateSendImageAction(payload.getUserId(), f);
             }
 
-            log.debug("[adapter] sending image: {}", json);
-            session.sendMessage(new TextMessage(json));
+            log.info("[adapter.sender] build sending image: {}", image);
+            log.debug("[adapter.sender] raw sending image action json: {}", json);
+            sendPartialMessage(session, json, PARTIAL_MESSAGE_MAX_CHAR_NUM);
         } catch (Exception e) {
-            log.warn("[adapter] send image failed", e);
+            log.warn("[adapter.sender] send image failed", e);
         }
     }
 
@@ -132,10 +133,11 @@ public class OneBotSender implements Sender {
                         : simpleActionBuilder.buildPrivateReplyImageAction(payload.getUserId(), payload.getMessageId(), f);
             }
 
-            log.debug("[adapter] responding image: {}", json);
-            session.sendMessage(new TextMessage(json));
+            log.info("[adapter.sender] build replying image: {}", image);
+            log.debug("[adapter.sender] raw replying image action json: {}", json);
+            sendPartialMessage(session, json, PARTIAL_MESSAGE_MAX_CHAR_NUM);
         } catch (Exception e) {
-            log.warn("[adapter] respond image failed", e);
+            log.warn("[adapter.sender] replay image failed", e);
         }
     }
 
@@ -164,7 +166,7 @@ public class OneBotSender implements Sender {
                         String remainingJson = payload.getGroupId() != null
                                 ? simpleActionBuilder.buildGroupSendVideoAction(payload.getGroupId(), remainingFile)
                                 : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), remainingFile);
-                        session.sendMessage(new TextMessage(remainingJson));
+                        sendPartialMessage(session, remainingJson, PARTIAL_MESSAGE_MAX_CHAR_NUM);
                     }
                 }
             } else {
@@ -175,10 +177,11 @@ public class OneBotSender implements Sender {
                         : simpleActionBuilder.buildPrivateSendVideoAction(payload.getUserId(), f);
             }
 
-            log.debug("[adapter] sending video: {}", json);
-            session.sendMessage(new TextMessage(json));
+            log.info("[adapter.sender] build sending video: {}", video);
+            log.debug("[adapter.sender] raw sending video action json: {}", json);
+            sendPartialMessage(session, json, PARTIAL_MESSAGE_MAX_CHAR_NUM);
         } catch (Exception e) {
-            log.warn("[adapter] send video failed", e);
+            log.warn("[adapter.sender] send video failed", e);
         }
     }
 
@@ -186,14 +189,16 @@ public class OneBotSender implements Sender {
     public void pushActionJSON(long selfId, String json) {
         WebSocketSession session = sessions.get(selfId);
         if (session == null || !session.isOpen()) {
-            log.warn("[adapter] raw json send: session missing/closed, selfId={}", selfId);
+            log.warn("[adapter.sender] raw json send: session missing/closed, selfId={}", selfId);
             return;
         }
 
         try {
-            session.sendMessage(new TextMessage(json));
+            log.info("[adapter.sender] push raw action json (may be a command response)");
+            log.debug("[adapter.sender] raw action json: {}", json);
+            sendPartialMessage(session, json, PARTIAL_MESSAGE_MAX_CHAR_NUM);
         } catch (Exception e) {
-            log.warn("[adapter] raw json send failed, selfId={}", selfId, e);
+            log.warn("[adapter.sender] raw json send failed, selfId={}", selfId, e);
         }
     }
 
@@ -223,45 +228,49 @@ public class OneBotSender implements Sender {
         return mapper.apply(resp);
     }
 
-    private void sendTextOnce(WebSocketSession session, ParsedPayloadDTO payload, Object o) throws IOException {
-        if (o == null) return;
+    private void sendTextOnce(WebSocketSession session, ParsedPayloadDTO payload, Object text) throws IOException {
+        if (text == null) return;
         String json;
 
-        if (o instanceof String s) {
+        if (text instanceof String s) {
             json = payload.getGroupId() != null
                     ? simpleActionBuilder.buildGroupSendTextAction(payload.getGroupId(), s)
                     : simpleActionBuilder.buildPrivateSendTextAction(payload.getUserId(), s);
+            log.debug("[adapter.sender] build sending text: {}", text);
         } else {
-            String text = String.valueOf(o);
+            String convertedText = String.valueOf(text);
             json = payload.getGroupId() != null
-                    ? simpleActionBuilder.buildGroupSendTextAction(payload.getGroupId(), text)
-                    : simpleActionBuilder.buildPrivateSendTextAction(payload.getUserId(), text);
+                    ? simpleActionBuilder.buildGroupSendTextAction(payload.getGroupId(), convertedText)
+                    : simpleActionBuilder.buildPrivateSendTextAction(payload.getUserId(), convertedText);
+            log.debug("[adapter.sender] build sending text: {}", convertedText);
         }
 
-        log.debug("[adapter] sending message: {}", json);
-        session.sendMessage(new TextMessage(json));
+        log.debug("[adapter.sender] raw sending text action json: {}", json);
+        sendPartialMessage(session, json, PARTIAL_MESSAGE_MAX_CHAR_NUM);
     }
 
-    private void responseTextOnce(WebSocketSession session, ParsedPayloadDTO payload, Object o) throws IOException {
-        if (o == null) return;
+    private void replyTextOnce(WebSocketSession session, ParsedPayloadDTO payload, Object text) throws IOException {
+        if (text == null) return;
         String json;
 
-        if (o instanceof String s) {
+        if (text instanceof String s) {
             json = payload.getGroupId() != null
                     ? simpleActionBuilder.buildGroupReplyTextAction(payload.getGroupId(), payload.getMessageId(), s)
                     : simpleActionBuilder.buildPrivateReplyTextAction(payload.getUserId(), payload.getMessageId(), s);
+            log.info("[adapter.sender] build replying text: {}", text);
         } else {
-            String text = String.valueOf(o);
+            String convertedText = String.valueOf(text);
             json = payload.getGroupId() != null
-                    ? simpleActionBuilder.buildGroupReplyTextAction(payload.getGroupId(), payload.getMessageId(), text)
-                    : simpleActionBuilder.buildPrivateReplyTextAction(payload.getUserId(), payload.getMessageId(), text);
+                    ? simpleActionBuilder.buildGroupReplyTextAction(payload.getGroupId(), payload.getMessageId(), convertedText)
+                    : simpleActionBuilder.buildPrivateReplyTextAction(payload.getUserId(), payload.getMessageId(), convertedText);
+            log.info("[adapter.sender] build replying text: {}", convertedText);
         }
 
-        log.debug("[adapter] responding message: {}", json);
-        session.sendMessage(new TextMessage(json));
+        log.debug("[adapter.sender] raw replying text action json: {}", json);
+        sendPartialMessage(session, json, PARTIAL_MESSAGE_MAX_CHAR_NUM);
     }
 
-    // ===== helpers =====
+    // ++=============** helpers **=============++
 
     /** Iterable -> 去空白后的字符串列表 */
     private static List<String> toFileList(Iterable<?> it) {
@@ -321,7 +330,7 @@ public class OneBotSender implements Sender {
         try {
             return objectMapper.writeValueAsString(root);
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            throw new RuntimeException("serialize multi-image response failed", e);
+            throw new RuntimeException("serialize multi-image reply failed", e);
         }
     }
 
@@ -330,5 +339,29 @@ public class OneBotSender implements Sender {
         seg.put("type", "image");
         seg.put("data", Map.of("file", file));
         return seg;
+    }
+
+    /**
+     * partial message 发送，避免 The decoded text message was too big for the output buffer
+     * @param session
+     * @param json
+     * @param chunkSize 分片大小，以 UTF-8 字符数为单位
+     * @throws IOException
+     */
+    private void sendPartialMessage(WebSocketSession session, Object json, int chunkSize) throws IOException {
+        if (session == null || !session.isOpen() || json == null) return;
+
+        String jsonStr = (json instanceof String s) ? s : objectMapper.writeValueAsString(json);
+        int length = jsonStr.length();
+
+        for (int offset = 0; offset < length; ) {
+            int end = Math.min(length, offset + chunkSize);
+            if (Character.isHighSurrogate(jsonStr.charAt(end - 1))) end--;
+
+            boolean isLast = (end == length);
+            String chunk = jsonStr.substring(offset, end);
+            session.sendMessage(new TextMessage(chunk, isLast));
+            offset = end;
+        }
     }
 }
