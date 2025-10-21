@@ -13,7 +13,7 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-public class CacheImageService {
+public class ImageCacheService {
 
     private final RedisTemplate<String, byte[]> redisTemplate;
 

@@ -57,11 +57,13 @@ public class Pjsk extends Plugin {
     }
 
     @BotCommand("index")
+    @Override
     public void index(ParsedPayloadDTO payload) {
         sender.replyText(payload, "请接 pjsk 模块的具体命令哦");
     }
 
     @BotCommand("help")
+    @Override
     public void help(ParsedPayloadDTO payload) {
         sender.replyText(payload, helpText);
     }

@@ -354,4 +354,27 @@ public class GalleryCacheService {
         }
         return list;
     }
+
+    public void forceClearCache() {
+        try {
+            log.info("[core.cache] force clearing all gallery caches");
+
+            Set<String> keys = redisTemplate.keys("gallery:*");
+            if (!keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                log.info("[core.cache] cleared {} gallery cache keys", keys.size());
+            } else {
+                log.info("[core.cache] no gallery cache keys found to clear");
+            }
+        } catch (Exception e) {
+            log.error("[core.cache] failed to clear gallery cache: {}", e.getMessage(), e);
+            throw new InternalServerErrorException("failed to clear gallery cache");
+        }
+    }
+
+    public void forceRefreshCache() {
+        log.info("[core.cache] force refreshing gallery cache...");
+        forceClearCache();
+        tryUpdateGalleryCache();
+    }
 }

@@ -44,12 +44,14 @@ public class Test extends Plugin {
                           - zhuanfa <QQid> <QQname> <text>: 测试链式构造合并转发消息
                           - yinyong <args...>: 测试 bot 获取图片引用消息""";
 
+    @BotCommand("index")
     @Override
     public void index(ParsedPayloadDTO payload) {
         sender.replyText(payload, "未给出具体的 test 模块命令，或命令有误");
     }
 
     @BotCommand("help")
+    @Override
     public void help(ParsedPayloadDTO payload) {
         pluginRegistry.callPluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
     }

@@ -21,22 +21,26 @@ public class CommandInvoker {
 
     public Object invokeByPayload(ParsedPayloadDTO payload) {
         try {
-            String line = payload.getCommandText();
-            if (line == null || line.isBlank()) {
+            String commandText = payload.getCommandText();
+
+            if (commandText == null || commandText.isBlank()) {
                 if ("message".equals(payload.getPostType())) {
                     defaultStrategy.defaultHandle(payload);
                 }
                 return null;
             }
-            String lline = line.stripLeading();
-            if (lline.isEmpty() || lline.charAt(0) != '/') {
+
+            commandText = commandText.stripLeading();
+            if (commandText.isEmpty() || commandText.charAt(0) != '/') {
                 defaultStrategy.defaultHandle(payload);
                 return null;
             }
-            Parsed parsed = parse(lline);
+            Parsed parsed = parse(commandText);
             if (parsed == null) return null;
+
             String parsedRoot = parsed.root();
             log.debug("[core.invoker] command detected: {}", parsedRoot);
+
             PluginHolder holder = resolvePluginHolder(parsedRoot);
             List<Step> steps = groupSteps(parsed.subAndArgs(), holder);
             if (steps.isEmpty()) {
@@ -115,28 +119,30 @@ public class CommandInvoker {
             String tk = tokens.get(idx);
             String low = tk.toLowerCase(Locale.ROOT);
             if (methodNames.contains(low)) {
-                // 命令起始或可能的“参数/新命令”分界
+                // 命令起始或可能的 “参数/新命令” 分界
                 if (curName == null) {
                     // 首次遇到子命令别名：直接将其视为当前命令名，避免生成空的 index 步
                     curName = low;
-                    curArgs.clear();
+                    log.debug("[core.invoker] matched first command: {}", curName);
                     continue;
                 }
-                // 分组阶段的贪心策略：只要当前命令存在“任一接参实现”，就把该 token 吞为参数
-                boolean acceptsList = acceptsArgsForGrouping(holder, curName);
-                if (acceptsList) {
+                // 分组阶段的贪心策略：只要当前命令存在 “任一接参实现”，就把该 token 吞为参数
+                if (acceptsArgsForGrouping(holder, curName)) {
                     curArgs.add(tk);
+                    log.debug("[core.invoker] matched args: {}", tk);
                 } else {
                     // 当前命令不接参，结算并切换到新命令
                     out.add(new Step(curName, List.copyOf(curArgs)));
                     curName = low;
                     curArgs = new ArrayList<>();
+                    log.debug("[core.invoker] matched next command: {}", curName);
                 }
             } else {
                 // 普通参数
                 if (curName == null) {
                     // 首个 token 不是子命令别名时，启动 index 作为当前命令来承接参数
                     curName = indexAlias();
+                    log.debug("[core.invoker] matched args: {}", tk);
                 }
                 curArgs.add(tk);
             }
