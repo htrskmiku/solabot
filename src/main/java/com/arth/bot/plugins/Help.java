@@ -39,7 +39,7 @@ public class Help extends Plugin {
             building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                     我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                    👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服为例（其实目前也只硬编码了国服，其他服建议用 hrk 的，需要其他服的联系我）："""))
+                    👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服为例（需要其他服的模块可联系我）："""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                     #!name=国服烤森远程转发
                     #!desc=抓取游戏数据并转发到远程服务器

@@ -16,6 +16,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 @Slf4j
@@ -30,6 +31,20 @@ public class OneBotWsController extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final EchoWaiter echoWaiter;
 
+    /* 分片大小 */
+    private static final int MAX_TEXT_MESSAGE_BYTES = 5 * 1024 * 1024;  // 5MB
+    /* 分片 */
+    private final ConcurrentHashMap<String, StringBuilder> partialBuffer = new ConcurrentHashMap<>();
+
+    /**
+     * 启用分片读取 output buffer
+     * @return
+     */
+    @Override
+    public boolean supportsPartialMessages() {
+        return true;
+    }
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         log.info("[adapter.controller] ws connected: {}", session.getId());
@@ -38,7 +53,31 @@ public class OneBotWsController extends TextWebSocketHandler {
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
-            String rawPayload = message.getPayload();
+            /* 分片读取 output buffer，避免 code 1009 错误：The decoded text message was too big
+            for the output buffer and the endpoint does not support partial messages */
+            String rawPayload;
+            String sid = session.getId();
+
+            // 分片聚合流程（非当前会话的前序分片，或当前帧非最后一片）
+            if (partialBuffer.containsKey(sid) || !message.isLast()) {
+                StringBuilder buf = partialBuffer.computeIfAbsent(sid, k -> new StringBuilder());
+                if (buf.length() + message.getPayloadLength() > MAX_TEXT_MESSAGE_BYTES) {
+                    partialBuffer.remove(sid);
+                    session.close(CloseStatus.TOO_BIG_TO_PROCESS);
+                    return;
+                }
+                buf.append(message.getPayload());
+
+                // 非最后一片
+                if (!message.isLast()) return;
+                // 最后一片，结算并取出完整消息
+                rawPayload = buf.toString();
+                partialBuffer.remove(sid);
+            } else {
+                // 非分片或仅一片，直接结算
+                rawPayload = message.getPayload();
+            }
+
             JsonNode root = objectMapper.readTree(rawPayload);
 
             /* 分流消息（拦截 echo） */
@@ -111,7 +150,8 @@ public class OneBotWsController extends TextWebSocketHandler {
         if (sid instanceof Long selfId) sessionRegistry.remove(selfId);
         int code = status.getCode();
         String reason = status.getReason();
-        // 有些时候并不是我们主动断开的，可能是缓冲区溢出等问题，例如 code 1009
+        // 有些时候并不是我们主动希望断开的，可能是缓冲区溢出等问题，例如 code 1009，打印信息
         log.info("[adapter.controller] ws closed: {}, code: {}, reason: {}", session.getId(), code, reason);
+        partialBuffer.remove(session.getId());
     }
 }

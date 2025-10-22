@@ -173,7 +173,7 @@ public class Pjsk extends Plugin {
         String dirPath = System.getProperty("user.dir") + "/dynamic/pjsk_user_data/mysekai/draw/map/";
         Path directory = Path.of(dirPath);
         if (!Files.exists(directory) || !Files.isDirectory(directory)) {
-            return null;
+            return Path.of(dirPath, "default.png");
         }
         try {
             return Files.list(directory)
@@ -182,93 +182,38 @@ public class Pjsk extends Plugin {
                         return fileName.matches("[a-z]{2}_" + pjskId + "\\.png");
                     })
                     .findFirst()
-                    .orElse(null);
+                    .orElse(Path.of(dirPath, "default.png"));
         } catch (IOException e) {
             log.error("没有找到指定的数据", e);
-            return null;
+            return Path.of(dirPath, "default.png");
         }
     }
 
     @BotCommand({"初始化", "initUserBinding", "init"})
     @DirectAuthInterceptor(scope = AuthScope.USER, mode  = AuthMode.ALLOW, targets = "1093664084")
     public void initUserBinding(ParsedPayloadDTO payload) {
-        PjskBinding a = new PjskBinding();
-        a.setPjskId("7485938033569569588");
-        a.setUserId(1256977415L);
-        a.setGroupId(619096416L);
-        a.setServerRegion("xx");
-        a.setCreatedAt(new Date());
-        a.setUpdatedAt(new Date());
-        try {
-            pjskBindingMapper.insert(a);
-        } catch (Exception ignored) {
+        Object[][] qunYouId = {
+                {1256977415L, "7485938033569569588"},  // 小萌
+                {1685280357L, "7445096955522390818"},  // pl
+                {1828209434L, "7487212719486049063"},  // 小弦
+                {984097301L, "7486314772426939173"},   // 日蚀
+                {1461762986L, "7489244575534537481"},  // 热可可咖啡
+                {1093664084L, "123"}  // test
+        };
 
-        }
+        for (Object[] pair : qunYouId) {
+            PjskBinding a = new PjskBinding();
+            a.setPjskId((String) pair[1]);
+            a.setUserId((Long) pair[0]);
+            a.setGroupId(793709714L);
+            a.setServerRegion("xx");
+            a.setCreatedAt(new Date());
+            a.setUpdatedAt(new Date());
+            try {
+                pjskBindingMapper.insert(a);
+            } catch (Exception ignored) {
 
-        PjskBinding b = new PjskBinding();
-        b.setPjskId("7445096955522390818");
-        b.setUserId(1685280357L);
-        b.setGroupId(619096416L);
-        b.setServerRegion("xx");
-        b.setCreatedAt(new Date());
-        b.setUpdatedAt(new Date());
-        try {
-            pjskBindingMapper.insert(b);
-        } catch (Exception ignored) {
-
-        }
-
-        PjskBinding c = new PjskBinding();
-        c.setPjskId("7487212719486049063");
-        c.setUserId(1828209434L);
-        c.setGroupId(793709714L);
-        c.setServerRegion("xx");
-        c.setCreatedAt(new Date());
-        c.setUpdatedAt(new Date());
-        try {
-            pjskBindingMapper.insert(c);
-        } catch (Exception ignored) {
-
-        }
-
-        PjskBinding d = new PjskBinding();
-        d.setPjskId("7486314772426939173");
-        d.setUserId(984097301L);
-        d.setGroupId(793709714L);
-        d.setServerRegion("xx");
-        d.setCreatedAt(new Date());
-        d.setUpdatedAt(new Date());
-        try {
-            pjskBindingMapper.insert(d);
-        } catch (Exception ignored) {
-
-        }
-
-        PjskBinding e = new PjskBinding();
-        e.setPjskId("7489244575534537481");
-        e.setUserId(1461762986L);
-        e.setGroupId(793709714L);
-        e.setServerRegion("xx");
-        e.setCreatedAt(new Date());
-        e.setUpdatedAt(new Date());
-        try {
-            pjskBindingMapper.insert(e);
-        } catch (Exception ignored) {
-
-        }
-
-        // 测试用
-        PjskBinding f = new PjskBinding();
-        f.setPjskId("123");
-        f.setUserId(1093664084L);
-        f.setGroupId(793709714L);
-        f.setServerRegion("xx");
-        f.setCreatedAt(new Date());
-        f.setUpdatedAt(new Date());
-        try {
-            pjskBindingMapper.insert(e);
-        } catch (Exception ignored) {
-
+            }
         }
 
         sender.replyText(payload, "database init successfully");

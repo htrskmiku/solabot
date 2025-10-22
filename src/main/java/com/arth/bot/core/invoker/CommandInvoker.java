@@ -200,11 +200,11 @@ public class CommandInvoker {
         for (CommandHandler h : cands) {
             int s = h.score(payload, args);
             if (hasArgs && !h.acceptsArgs()) {
-                s -= 1000; // 带参但处理器不接参，狠狠惩罚
+                s -= 1000;  // 带参但命令不接参，狠狠惩罚
             } else if (!hasArgs && h.acceptsArgs()) {
-                s -= 100;   // 无参但处理器接参，惩罚
+                s -= 100;   // 无参但命令接参，惩罚
             } else {
-                s += 10;   // 匹配期望，加分
+                s += 10;    // 匹配期望，加分
             }
             if (s > best) {
                 best = s;
@@ -251,4 +251,3 @@ public class CommandInvoker {
         return false;
     }
 }
-

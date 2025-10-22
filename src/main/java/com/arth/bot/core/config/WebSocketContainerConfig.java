@@ -11,7 +11,7 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
 public class WebSocketContainerConfig {
 
     /**
-     * 配置 TomCat 缓冲区大小，避免 code 1009 错误：The decoded text message was too big for the output buffer and the endpoint does not support partial messages
+     * 配置 TomCat 缓冲区大小，
      * TomCat 默认仅配置 8KB 缓冲区
      * @return
      */
