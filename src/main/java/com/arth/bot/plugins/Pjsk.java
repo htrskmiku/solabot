@@ -2,9 +2,6 @@ package com.arth.bot.plugins;
 
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.ActionChainBuilder;
-import com.arth.bot.core.authorization.annotation.DirectAuthInterceptor;
-import com.arth.bot.core.authorization.model.AuthMode;
-import com.arth.bot.core.authorization.model.AuthScope;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.database.domain.PjskBinding;
@@ -165,6 +162,7 @@ public class Pjsk extends Plugin {
 
     /**
      * 临时性方法，能跑就行 TMP
+     *
      * @param pjskId
      * @return
      */
@@ -189,44 +187,18 @@ public class Pjsk extends Plugin {
         }
     }
 
-    @BotCommand({"初始化", "initUserBinding", "init"})
-    @DirectAuthInterceptor(scope = AuthScope.USER, mode  = AuthMode.ALLOW, targets = "1093664084")
-    public void initUserBinding(ParsedPayloadDTO payload) {
-        Object[][] qunYouId = {
-                {1256977415L, "7485938033569569588"},  // 小萌
-                {1685280357L, "7445096955522390818"},  // pl
-                {1828209434L, "7487212719486049063"},  // 小弦
-                {984097301L, "7486314772426939173"},   // 日蚀
-                {1461762986L, "7489244575534537481"},  // 热可可咖啡
-                {1093664084L, "123"}  // test
-        };
-
-        for (Object[] pair : qunYouId) {
-            PjskBinding a = new PjskBinding();
-            a.setPjskId((String) pair[1]);
-            a.setUserId((Long) pair[0]);
-            a.setGroupId(793709714L);
-            a.setServerRegion("xx");
-            a.setCreatedAt(new Date());
-            a.setUpdatedAt(new Date());
-            try {
-                pjskBindingMapper.insert(a);
-            } catch (Exception ignored) {
-
-            }
-        }
-
-        sender.replyText(payload, "database init successfully");
-    }
-
-    private LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId) {
+    private LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId, String serverRegion) {
         LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PjskBinding::getUserId, userId).eq(PjskBinding::getServerRegion, "xx");
+        queryWrapper.eq(PjskBinding::getUserId, userId).eq(PjskBinding::getServerRegion, serverRegion);
         if (groupId == null) {
             queryWrapper.isNull(PjskBinding::getGroupId);
         } else {
             queryWrapper.eq(PjskBinding::getGroupId, groupId);
         }
         return queryWrapper;
+    }
+
+    private LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId) {
+        return queryBinding(userId, groupId, "cn");
     }
 }

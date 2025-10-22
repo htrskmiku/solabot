@@ -15,7 +15,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -29,9 +28,9 @@ public class OneBotSender implements Sender {
 
     private final SessionRegistry sessions;
     private final SimpleActionBuilder simpleActionBuilder;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-    private final ConcurrentHashMap<String, CompletableFuture<JsonNode>> pending = new ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper;
     private final EchoWaiter echoWaiter;
+    private final ConcurrentHashMap<String, CompletableFuture<JsonNode>> pending = new ConcurrentHashMap<>();
 
     private static final int PARTIAL_MESSAGE_MAX_CHAR_NUM = 300_000;
 
@@ -52,6 +51,21 @@ public class OneBotSender implements Sender {
     }
 
     @Override
+    public void sendText(WebSocketSession session, long userId, Long groupId, Object text) {
+        if (session == null || !session.isOpen() || text == null) return;
+
+        try {
+            if (text instanceof Iterable<?> it) {
+                for (Object o : it) sendTextOnce(session, userId, groupId, o);
+            } else {
+                sendTextOnce(session, userId, groupId, text);
+            }
+        } catch (Exception e) {
+            log.warn("[adapter.sender] send text failed", e);
+        }
+    }
+
+    @Override
     public void replyText(ParsedPayloadDTO payload, Object text) {
         WebSocketSession session = sessions.get(payload.getSelfId());
         if (session == null || !session.isOpen() || text == null) return;
@@ -61,6 +75,21 @@ public class OneBotSender implements Sender {
                 for (Object o : it) replyTextOnce(session, payload, o);
             } else {
                 replyTextOnce(session, payload, text);
+            }
+        } catch (Exception e) {
+            log.warn("[adapter.sender] send text failed", e);
+        }
+    }
+
+    @Override
+    public void replyText(WebSocketSession session, long userId, Long groupId, long messageId, Object text) {
+        if (session == null || !session.isOpen() || text == null) return;
+
+        try {
+            if (text instanceof Iterable<?> it) {
+                for (Object o : it) replyTextOnce(session, userId, groupId, messageId, o);
+            } else {
+                replyTextOnce(session, userId, groupId, messageId, text);
             }
         } catch (Exception e) {
             log.warn("[adapter.sender] send text failed", e);
@@ -229,20 +258,20 @@ public class OneBotSender implements Sender {
     }
 
     private void sendTextOnce(WebSocketSession session, ParsedPayloadDTO payload, Object text) throws IOException {
+        sendTextOnce(session, payload.getUserId(), payload.getGroupId(), text);
+    }
+
+    private void sendTextOnce(WebSocketSession session, long userId, Long groupId, Object text) throws IOException {
         if (text == null) return;
         String json;
+        String content = (text instanceof String s) ? s : String.valueOf(text);
 
-        if (text instanceof String s) {
-            json = payload.getGroupId() != null
-                    ? simpleActionBuilder.buildGroupSendTextAction(payload.getGroupId(), s)
-                    : simpleActionBuilder.buildPrivateSendTextAction(payload.getUserId(), s);
-            log.debug("[adapter.sender] build sending text: {}", text);
+        if (groupId != null) {
+            json = simpleActionBuilder.buildGroupSendTextAction(groupId, content);
+            log.debug("[adapter.sender] build sending text to group {}: {}", groupId, content);
         } else {
-            String convertedText = String.valueOf(text);
-            json = payload.getGroupId() != null
-                    ? simpleActionBuilder.buildGroupSendTextAction(payload.getGroupId(), convertedText)
-                    : simpleActionBuilder.buildPrivateSendTextAction(payload.getUserId(), convertedText);
-            log.debug("[adapter.sender] build sending text: {}", convertedText);
+            json = simpleActionBuilder.buildPrivateSendTextAction(userId, content);
+            log.debug("[adapter.sender] build sending text to user {}: {}", userId, content);
         }
 
         log.debug("[adapter.sender] raw sending text action json: {}", json);
@@ -250,20 +279,20 @@ public class OneBotSender implements Sender {
     }
 
     private void replyTextOnce(WebSocketSession session, ParsedPayloadDTO payload, Object text) throws IOException {
+        replyTextOnce(session, payload.getUserId(), payload.getGroupId(), payload.getMessageId(), text);
+    }
+
+    private void replyTextOnce(WebSocketSession session, long userId, Long groupId, long messageId, Object text) throws IOException {
         if (text == null) return;
         String json;
+        String content = (text instanceof String s) ? s : String.valueOf(text);
 
-        if (text instanceof String s) {
-            json = payload.getGroupId() != null
-                    ? simpleActionBuilder.buildGroupReplyTextAction(payload.getGroupId(), payload.getMessageId(), s)
-                    : simpleActionBuilder.buildPrivateReplyTextAction(payload.getUserId(), payload.getMessageId(), s);
-            log.info("[adapter.sender] build replying text: {}", text);
+        if (groupId != null) {
+            json = simpleActionBuilder.buildGroupReplyTextAction(groupId, messageId, content);
+            log.info("[adapter.sender] build replying text to group {}: {}", groupId, content);
         } else {
-            String convertedText = String.valueOf(text);
-            json = payload.getGroupId() != null
-                    ? simpleActionBuilder.buildGroupReplyTextAction(payload.getGroupId(), payload.getMessageId(), convertedText)
-                    : simpleActionBuilder.buildPrivateReplyTextAction(payload.getUserId(), payload.getMessageId(), convertedText);
-            log.info("[adapter.sender] build replying text: {}", convertedText);
+            json = simpleActionBuilder.buildPrivateReplyTextAction(userId, messageId, content);
+            log.info("[adapter.sender] build replying text to user {}: {}", userId, content);
         }
 
         log.debug("[adapter.sender] raw replying text action json: {}", json);
@@ -284,7 +313,7 @@ public class OneBotSender implements Sender {
     }
 
     /** 构造：多图同一条消息（不带 reply） */
-    private static String buildMultiImageSendJson(String messageType, Map<String, Object> target, List<String> files) {
+    private String buildMultiImageSendJson(String messageType, Map<String, Object> target, List<String> files) {
         Map<String, Object> root = new HashMap<>();
         root.put("action", "send_msg");
         root.put("echo", "echo-" + System.currentTimeMillis());
@@ -307,7 +336,7 @@ public class OneBotSender implements Sender {
     }
 
     /** 构造：多图同一条消息（带 reply） */
-    private static String buildMultiImageResponseJson(String messageType, Map<String, Object> target, long messageId, List<String> files) {
+    private String buildMultiImageResponseJson(String messageType, Map<String, Object> target, long messageId, List<String> files) {
         Map<String, Object> root = new HashMap<>();
         root.put("action", "send_msg");
         root.put("echo", "echo-" + System.currentTimeMillis());

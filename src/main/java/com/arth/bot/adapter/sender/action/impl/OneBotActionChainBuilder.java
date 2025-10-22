@@ -15,18 +15,20 @@ import java.util.Map;
 
 @Service
 public class OneBotActionChainBuilder implements ActionChainBuilder {
-
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    
+    /* 一个血泪教训是不要用字段注入，这里 ObjectMapper 无论是 @Autowired 还是 @Resource 都为 null（注入失败） */
+    private final ObjectMapper objectMapper;
     private final SimpleActionBuilder simpleActionBuilder;
     private final List<Map<String, Object>> segments = new ArrayList<>();
 
     @Autowired
-    public OneBotActionChainBuilder(SimpleActionBuilder simpleActionBuilder) {
+    public OneBotActionChainBuilder(ObjectMapper objectMapper, SimpleActionBuilder simpleActionBuilder) {
+        this.objectMapper = objectMapper;
         this.simpleActionBuilder = simpleActionBuilder;
     }
 
     public OneBotActionChainBuilder create() {
-        return new OneBotActionChainBuilder(this.simpleActionBuilder);
+        return new OneBotActionChainBuilder(this.objectMapper, this.simpleActionBuilder);
     }
 
     public OneBotActionChainBuilder setReplay(long messageId) {

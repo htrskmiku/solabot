@@ -2,6 +2,7 @@ package com.arth.bot.adapter.sender;
 
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.time.Duration;
 import java.util.function.Function;
@@ -16,6 +17,8 @@ public interface Sender {
      */
     void sendText(ParsedPayloadDTO payload, Object text);
 
+    void sendText(WebSocketSession session, long userId, Long groupId, Object text);
+
     /**
      * 控制 bot 发送回复文本字符串，接收 String 或 List<String>
      * 传入 List<String> 时，遍历发送
@@ -23,6 +26,8 @@ public interface Sender {
      * @param text
      */
     void replyText(ParsedPayloadDTO payload, Object text);
+
+    void replyText(WebSocketSession session, long userId, Long groupId, long messageId, Object text);
 
     /**
      * 控制 bot 发送一张图片（非回复），接收表示文件地址的 String 或 List<String>

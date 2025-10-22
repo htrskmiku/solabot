@@ -4,6 +4,7 @@ import com.arth.bot.adapter.sender.action.SimpleActionBuilder;
 import com.arth.bot.core.common.dto.OneBotReturnActionDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -11,9 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class OneBotSimpleActionBuilder implements SimpleActionBuilder {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     public String buildGroupSendTextAction(long groupId, String text) {

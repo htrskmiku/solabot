@@ -3,6 +3,7 @@ package com.arth.bot.plugins;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.invoker.PluginRegistry;
 import com.arth.bot.core.invoker.annotation.BotCommand;
+import com.arth.bot.core.invoker.annotation.BotPlugin;
 import lombok.Setter;
 
 public abstract class Plugin {
@@ -14,7 +15,9 @@ public abstract class Plugin {
     public abstract void index(ParsedPayloadDTO payload);
 
     @BotCommand("help")
-    public abstract void help(ParsedPayloadDTO payload);
+    public void help(ParsedPayloadDTO payload) {
+        pluginRegistry.callPluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
+    }
 
     public abstract String getHelpText();
 }

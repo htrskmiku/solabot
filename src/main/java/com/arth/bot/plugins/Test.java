@@ -35,14 +35,14 @@ public class Test extends Plugin {
 
     @Getter
     public final String helpText = """
-                        test 测试模块目前支持以下命令：
-                          - quanxian: 测试鉴权切面，硬编码仅允许 1093664084
-                          - zuse <delay_time>: 测试多线程异步
-                          - huifu: 测试 bot 回复
-                          - tu: 测试发图
-                          - shipin: 测试发视频
-                          - zhuanfa <QQid> <QQname> <text>: 测试链式构造合并转发消息
-                          - yinyong <args...>: 测试 bot 获取图片引用消息""";
+            test 测试模块目前支持以下命令：
+              - quanxian: 测试鉴权切面，硬编码仅允许 1093664084
+              - zuse <delay_time>: 测试多线程异步
+              - huifu: 测试 bot 回复
+              - tu: 测试发图
+              - shipin: 测试发视频
+              - zhuanfa <QQid> <QQname> <text>: 测试链式构造合并转发消息
+              - yinyong <args...>: 测试 bot 获取图片引用消息""";
 
     @BotCommand("index")
     @Override
@@ -53,17 +53,18 @@ public class Test extends Plugin {
     @BotCommand("help")
     @Override
     public void help(ParsedPayloadDTO payload) {
-        pluginRegistry.callPluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
+        super.help(payload);
     }
 
     /**
      * 权限测试
+     *
      * @param payload
      */
     @BotCommand("quanxian")
     @DirectAuthInterceptor(
             scope = AuthScope.USER,
-            mode  = AuthMode.ALLOW,
+            mode = AuthMode.ALLOW,
             targets = "1093664084"
     )
     public void quanxian(ParsedPayloadDTO payload) {
@@ -73,6 +74,7 @@ public class Test extends Plugin {
     /**
      * 多线程异步测试
      * 参数解析测试
+     *
      * @param payload
      */
     @BotCommand("zuse")
@@ -82,7 +84,8 @@ public class Test extends Plugin {
             if (args != null && !args.isEmpty()) {
                 ms = Math.max(0, Long.parseLong(args.get(0)));
             }
-        } catch (NumberFormatException ignore) {}
+        } catch (NumberFormatException ignore) {
+        }
 
         try {
             Thread.sleep(ms);
@@ -94,6 +97,7 @@ public class Test extends Plugin {
 
     /**
      * 回复功能测试
+     *
      * @param payload
      */
     @BotCommand("huifu")
@@ -112,6 +116,7 @@ public class Test extends Plugin {
 
     /**
      * 视频发送测试
+     *
      * @param payload
      */
     @BotCommand("shipin")
@@ -122,6 +127,7 @@ public class Test extends Plugin {
 
     /**
      * 生成转发消息测试
+     *
      * @param payload
      */
     @BotCommand("zhuanfa")
@@ -131,13 +137,14 @@ public class Test extends Plugin {
                 .addCustomNode(idd, args.get(1), n -> n.text(args.get(2)));
 
         String json = (payload.getGroupId() != null) ?
-                built.toGroupJson(payload.getGroupId()) :built.toPrivateJson(payload.getUserId());
+                built.toGroupJson(payload.getGroupId()) : built.toPrivateJson(payload.getUserId());
 
         sender.pushActionJSON(payload.getSelfId(), json);
     }
 
     /**
      * 测试 bot 获取非文本引用消息
+     *
      * @param payload
      */
     @BotCommand("yinyong")
@@ -177,6 +184,7 @@ public class Test extends Plugin {
 
     /**
      * 测试 bot 获取参数
+     *
      * @param payload
      */
     @BotCommand("canshu")

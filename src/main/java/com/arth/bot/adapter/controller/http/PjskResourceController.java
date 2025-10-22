@@ -17,25 +17,46 @@ import java.nio.file.Path;
 @RequestMapping("/pjsk/resource")
 public class PjskResourceController {
 
-    /* 烤森资源透视地图 */
+    private static final Path BASE_DIR = Path.of("dynamic/pjsk_user_data/mysekai/draw").toAbsolutePath().normalize();
+
     @GetMapping("/{region}/mysekai/{id}/map")
     public ResponseEntity<Resource> getMysekaiMap(@PathVariable String region, @PathVariable String id) throws IOException {
-        Path file = Path.of("dynamic/pjsk_user_data/mysekai/draw/map/" + region + "_" + id + ".png");
-        if (!Files.exists(file)) {
-            return ResponseEntity.notFound().build();
-        }
-        Resource resource = new UrlResource(file.toUri());
-        return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(resource);
+        return buildPjskResourceUrlSafely("map", region, id);
     }
 
-    /* 烤森资源总览图 */
     @GetMapping("/{region}/mysekai/{id}/overview")
     public ResponseEntity<Resource> getMysekaiOverview(@PathVariable String region, @PathVariable String id) throws IOException {
-        Path file = Path.of("dynamic/pjsk_user_data/mysekai/draw/overview/" + region + "_" + id + ".png");
-        if (!Files.exists(file)) {
-            return ResponseEntity.notFound().build();
+        return buildPjskResourceUrlSafely("overview", region, id);
+    }
+
+    /**
+     * 安全的方法
+     *
+     * @param type
+     * @param region
+     * @param id
+     * @return
+     * @throws IOException
+     */
+    private ResponseEntity<Resource> buildPjskResourceUrlSafely(String type, String region, String id) throws IOException {
+        // 400: 校验 region 与 id 格式
+        if (!region.matches("[a-zA-Z0-9_-]+") || !id.matches("[a-zA-Z0-9_-]+")) {
+            return ResponseEntity.badRequest().build();
         }
+
+        Path subDir = BASE_DIR.resolve(type).normalize();
+        Path file = subDir.resolve(region + "_" + id + ".png").normalize();
+
+        // 403: 确保最终路径仍在 BASE_DIR 下，避免目录遍历攻击
+        if (!file.startsWith(BASE_DIR)) return ResponseEntity.status(403).build();
+
+        // 404
+        if (!Files.exists(file) || !Files.isRegularFile(file)) return ResponseEntity.notFound().build();
+
+        // 200
         Resource resource = new UrlResource(file.toUri());
-        return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(resource);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(resource);
     }
 }

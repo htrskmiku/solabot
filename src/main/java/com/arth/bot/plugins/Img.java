@@ -46,23 +46,23 @@ public class Img extends Plugin {
 
     @Getter
     public final String helpText = """
-                        命令使用示例：/img l
-                        img 图片处理模块目前支持以下命令：
-                          - l 或 left: 镜像对称，左对称
-                          - r 或 right: 镜像对称，右对称
-                          - u 或 up：镜像对称，上对称
-                          - d 或 down：镜像对称，下对称
-                          - rotate <90整数倍>：顺时针旋转，默认90°
-                          - speed <n>: 加速 gif 为 n 倍
-                            n 可以为负数，表示倒放
-                          - cut: 纯色背景抠图透明底
-                            可以跟 <阈值> 参数指定阈值，默认100，阈值表示像素与背景RGB欧氏距离的最大均方误差
-                          - gray: 转灰度图
-                          - mirror: 水平镜像翻转
-                          - gif: 转gif
-                            在QQ里看起来会更像表情包
-                          - png: 转png
-                          - check: 检查图片url""";
+            命令使用示例：/img l
+            img 图片处理模块目前支持以下命令：
+              - l 或 left: 镜像对称，左对称
+              - r 或 right: 镜像对称，右对称
+              - u 或 up：镜像对称，上对称
+              - d 或 down：镜像对称，下对称
+              - rotate <90整数倍>：顺时针旋转，默认90°
+              - speed <n>: 加速 gif 为 n 倍
+                n 可以为负数，表示倒放
+              - cut: 纯色背景抠图透明底
+                可以跟 <阈值> 参数指定阈值，默认100，阈值表示像素与背景RGB欧氏距离的最大均方误差
+              - gray: 转灰度图
+              - mirror: 水平镜像翻转
+              - gif: 转gif
+                在QQ里看起来会更像表情包
+              - png: 转png
+              - check: 检查图片url""";
 
     @PostConstruct
     public void init() {
@@ -78,7 +78,7 @@ public class Img extends Plugin {
     @BotCommand("help")
     @Override
     public void help(ParsedPayloadDTO payload) {
-        pluginRegistry.callPluginHelp(payload, this.getClass().getAnnotation(BotPlugin.class).value()[0]);
+        super.help(payload);
     }
 
     @BotCommand({"l", "left"})
@@ -239,25 +239,27 @@ public class Img extends Plugin {
 
     /**
      * 兼容旧命令 mid
+     *
      * @param payload
      * @throws IOException
      */
     @BotCommand("mid")
-    public void mid(ParsedPayloadDTO payload) throws  IOException {
+    public void mid(ParsedPayloadDTO payload) throws IOException {
         leftSymmetry(payload);
     }
 
     /**
      * 兼容旧命令 mid <args>
+     *
      * @param payload
      * @param args
      * @throws IOException
      */
     @BotCommand("mid")
     public void mid(ParsedPayloadDTO payload, List<String> args) throws IOException {
-        if (args == null || args.isEmpty() || args.get(0).equals("l")  || args.get(0).equals("left")) {
+        if (args == null || args.isEmpty() || args.get(0).equals("l") || args.get(0).equals("left")) {
             leftSymmetry(payload);
-        } else if (args.get(0).equals("r")  || args.get(0).equals("right")) {
+        } else if (args.get(0).equals("r") || args.get(0).equals("right")) {
             rightSymmetry(payload);
         } else {
             sender.replyText(payload, "mid 命令支持的参数是 l 或 r，默认 l");
@@ -341,8 +343,7 @@ public class Img extends Plugin {
         double rate;
         try {
             rate = Double.parseDouble(arg);
-        }
-        catch (NumberFormatException e) {
+        } catch (NumberFormatException e) {
             sender.replyText(payload, "倍率参数不合法");
             return;
         }
@@ -620,10 +621,12 @@ public class Img extends Plugin {
     // ***** ============= helper ============= *****
     // ***** ============= helper ============= *****
 
-    private record Pixel(int x, int y, int rgb, int dist) {}
+    private record Pixel(int x, int y, int rgb, int dist) {
+    }
 
     /**
      * 返回 RGB 的平方距离差值（避免欧氏距离的根号计算）
+     *
      * @param rgb1
      * @param rgb2
      * @return
@@ -677,7 +680,7 @@ public class Img extends Plugin {
             appExt.setAttribute("applicationID", "NETSCAPE");
             appExt.setAttribute("authenticationCode", "2.0");
             int loop = Math.max(0, loopCount); // 0 = 无限
-            byte[] loopBytes = new byte[] { 0x01, (byte)(loop & 0xFF), (byte)((loop >> 8) & 0xFF) };
+            byte[] loopBytes = new byte[]{0x01, (byte) (loop & 0xFF), (byte) ((loop >> 8) & 0xFF)};
             appExt.setUserObject(loopBytes);
             appExts.appendChild(appExt);
             root.appendChild(appExts);
@@ -735,7 +738,7 @@ public class Img extends Plugin {
         if (rateAbs < 1.0) {
             for (int i = 0; i < frames.size(); i++) {
                 int d = delays.get(i);
-                int nd = Math.max(GIF_MIN_CS, Math.min(GIF_MAX_CS, (int)Math.round(d / rateAbs)));
+                int nd = Math.max(GIF_MIN_CS, Math.min(GIF_MAX_CS, (int) Math.round(d / rateAbs)));
                 out.getFrames().add(frames.get(i));
                 out.getDelaysCs().add(nd);
             }
@@ -749,7 +752,7 @@ public class Img extends Plugin {
         while (true) {
             boolean allOk = true;
             for (int d : curD) {
-                int scaled = Math.max((int)Math.round(d / need), GIF_MIN_CS);
+                int scaled = Math.max((int) Math.round(d / need), GIF_MIN_CS);
                 if (scaled <= GIF_MIN_CS) {
                     allOk = false;
                     break;
@@ -760,8 +763,8 @@ public class Img extends Plugin {
             // 当无法保证最小播放间隔时间处于合理范围时，考虑删帧
             // 删奇数帧（索引 1,3,5, ...），保留偶数 0,2,4,...
             if (curF.size() <= 1) break;
-            List<BufferedImage> nf = new ArrayList<>((curF.size()+1)/2);
-            List<Integer> nd = new ArrayList<>((curD.size()+1)/2);
+            List<BufferedImage> nf = new ArrayList<>((curF.size() + 1) / 2);
+            List<Integer> nd = new ArrayList<>((curD.size() + 1) / 2);
             for (int i = 0; i < curF.size(); i += 2) {
                 nf.add(curF.get(i));
                 nd.add(curD.get(i));
@@ -775,13 +778,13 @@ public class Img extends Plugin {
 
         for (int i = 0; i < curF.size(); i++) {
             int d = curD.get(i);
-            int scaled = Math.max((int)Math.round(d / Math.max(need, 1.0)), GIF_MIN_CS);
+            int scaled = Math.max((int) Math.round(d / Math.max(need, 1.0)), GIF_MIN_CS);
             out.getFrames().add(curF.get(i));
             out.getDelaysCs().add(scaled);
         }
         if (out.getFrames().isEmpty()) {
             out.getFrames().add(frames.get(0));
-            out.getDelaysCs().add(Math.max(GIF_MIN_CS, (int)Math.round(delays.get(0) / rateAbs)));
+            out.getDelaysCs().add(Math.max(GIF_MIN_CS, (int) Math.round(delays.get(0) / rateAbs)));
         }
         return out;
     }

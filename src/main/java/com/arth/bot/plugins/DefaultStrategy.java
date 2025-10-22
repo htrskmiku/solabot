@@ -4,7 +4,7 @@ import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import jakarta.annotation.Resource;
 
-public class DefaultStrategy {
+public final class DefaultStrategy {
 
     @Resource
     private Sender sender;

@@ -13,6 +13,8 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Configuration
@@ -32,7 +34,7 @@ public class MybatisPlusConfig {
     }
 
     /**
-     * 检查 SQL 数据库连接，并判断表是否存在
+     * 检查 SQL 数据库连接，列出所有表
      */
     @EventListener(ApplicationReadyEvent.class)
     public void checkSqlConnectionAndTables() {
@@ -40,28 +42,22 @@ public class MybatisPlusConfig {
             String url = conn.getMetaData().getURL();
             log.info("[sql] SQL database connection successful: {}", url);
 
-            boolean pjskTableExists = checkTableExists(conn, "t_pjsk_binding");
-            boolean userTableExists = checkTableExists(conn, "t_user");
-            boolean groupTableExists = checkTableExists(conn, "t_group");
-            boolean membershipTableExists = checkTableExists(conn, "t_membership");
-            boolean subscriptionTableExists = checkTableExists(conn, "t_subscription");
-
-            log.info("[sql] table check results - t_pjsk_binding: {}, t_user: {}, t_group: {}, t_membership: {}, t_subscription: {}",
-                    pjskTableExists, userTableExists, groupTableExists, membershipTableExists, subscriptionTableExists);
-
-            if (!userTableExists) {
-                log.warn("[sql] user table (t_user) does not exist. Database may not be initialized yet.");
-            }
+            List<String> tables = getAllTables(conn);
+            log.info("[sql] Found {} tables in database: {}", tables.size(), tables);
 
         } catch (SQLException e) {
             log.error("[sql] SQL database connection failed!", e);
         }
     }
 
-    private boolean checkTableExists(Connection conn, String tableName) throws SQLException {
+    private List<String> getAllTables(Connection conn) throws SQLException {
+        List<String> tables = new ArrayList<>();
         DatabaseMetaData metaData = conn.getMetaData();
-        try (ResultSet tables = metaData.getTables(null, null, tableName, new String[]{"TABLE"})) {
-            return tables.next();
+        try (ResultSet rs = metaData.getTables(null, null, "%", new String[]{"TABLE"})) {
+            while (rs.next()) {
+                tables.add(rs.getString("TABLE_NAME"));
+            }
         }
+        return tables;
     }
 }

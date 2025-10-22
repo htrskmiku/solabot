@@ -24,16 +24,22 @@ public class CachedResourceController {
 
     /**
      * Redis PNG 图片缓存
+     *
      * @param uuid
      * @return
      */
     @GetMapping("/imgs/png/{uuid}")
     public ResponseEntity<Resource> getPng(@PathVariable String uuid) {
+        // 400: 校验 uuid 格式
+        if (!uuid.matches("[a-zA-Z0-9_-]+")) return ResponseEntity.badRequest().build();
+
         String key = "temp:image:png:" + uuid;
         byte[] imageBytes = redisTemplate.opsForValue().get(key);
-        if (imageBytes == null || imageBytes.length == 0) {
-            return ResponseEntity.notFound().build();
-        }
+
+        // 404
+        if (imageBytes == null || imageBytes.length == 0) return ResponseEntity.notFound().build();
+
+        // 200
         ByteArrayResource resource = new ByteArrayResource(imageBytes);
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
@@ -44,16 +50,22 @@ public class CachedResourceController {
 
     /**
      * Redis GIF 图片缓存
+     *
      * @param uuid
      * @return
      */
     @GetMapping("/imgs/gif/{uuid}")
     public ResponseEntity<Resource> getGif(@PathVariable String uuid) {
+        // 400: 校验 uuid 格式
+        if (!uuid.matches("[a-zA-Z0-9_-]+")) return ResponseEntity.badRequest().build();
+
         String key = "temp:image:gif:" + uuid;
         byte[] imageBytes = redisTemplate.opsForValue().get(key);
-        if (imageBytes == null || imageBytes.length == 0) {
-            return ResponseEntity.notFound().build();
-        }
+
+        // 404
+        if (imageBytes == null || imageBytes.length == 0) return ResponseEntity.notFound().build();
+
+        // 200
         ByteArrayResource resource = new ByteArrayResource(imageBytes);
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_GIF)

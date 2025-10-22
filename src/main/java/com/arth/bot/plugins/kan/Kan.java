@@ -18,7 +18,7 @@ public class Kan extends Plugin {
 
     @Getter
     public final String helpText = """
-                        看看模块现支持看：
+                        看看你的模块现支持看：
                           - 所有烤 oc，例如 saki、mnr
                           - 所有 v，例如 miku、kaito
                           - 看猪
@@ -40,7 +40,7 @@ public class Kan extends Plugin {
 
     @BotCommand("help")
     public void help(ParsedPayloadDTO payload) {
-        pluginRegistry.callPluginHelp(payload, "看");
+        super.help(payload);
     }
 
     @BotCommand("fresh")

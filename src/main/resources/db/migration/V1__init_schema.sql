@@ -1,7 +1,7 @@
 -- PJSK ID 关联表
 create table if not exists t_pjsk_binding
 (
-    id            bigserial primary key,
+    id            bigserial   primary key,
     pjsk_id       varchar(64) not null,
     user_id       bigint      not null,
     group_id      bigint,
@@ -11,13 +11,45 @@ create table if not exists t_pjsk_binding
     unique (pjsk_id, user_id, group_id)
 );
 create index if not exists idx_pjsk_binding_pjsk on t_pjsk_binding (pjsk_id);
-create index if not exists idx_pjsk_binding_qq on t_pjsk_binding (user_id);
+create index if not exists idx_pjsk_binding_user on t_pjsk_binding (user_id);
 create index if not exists idx_pjsk_binding_group on t_pjsk_binding (group_id);
 
--- 用户表
+-- Live 主播别名映射表
+create table if not exists t_streamer_alias
+(
+    id            bigserial   primary key,
+    streamer_id   bigint      not null,
+    stream_id     bigint      not null,
+    alias         varchar(32) not null,
+    created_at    timestamptz default now(),
+    updated_at    timestamptz default now(),
+    unique (streamer_id, stream_id)
+);
+create index if not exists idx_streamer_alias_streamer on t_streamer_alias (streamer_id);
+create index if not exists idx_streamer_alias_stream on t_streamer_alias (stream_id);
+create index if not exists idx_streamer_alias_alias on t_streamer_alias (alias);
+
+-- Live 推送订阅表
+create table if not exists t_streamer_subscription
+(
+    id            bigserial primary key,
+    user_id       bigint      not null,
+    group_id      bigint,
+    stream_id     bigint      not null,
+    created_at    timestamptz default now(),
+    updated_at    timestamptz default now(),
+    unique (user_id, group_id, stream_id)
+);
+create index if not exists idx_subscription_user on t_streamer_subscription (user_id);
+create index if not exists idx_subscription_group on t_streamer_subscription (group_id);
+create index if not exists idx_subscription_stream on t_streamer_subscription (stream_id);
+
+-- //============++++** 基本表 **++++============//
+
+-- 基本用户表
 create table if not exists t_user
 (
-    id         bigint primary key,
+    id         bigint      primary key,
     platform   varchar(16) not null default 'qq',
     open_id    bigint      not null,
     nickname   varchar(64),
@@ -31,10 +63,10 @@ create table if not exists t_user
 );
 create index if not exists idx_user_open on t_user (platform, open_id);
 
--- 群表
+-- 基本群表
 create table if not exists t_group
 (
-    id            bigint primary key,
+    id            bigint      primary key,
     platform      varchar(16) not null default 'qq',
     open_id       bigint      not null,
     name          varchar(128),
@@ -46,7 +78,7 @@ create table if not exists t_group
 );
 create index if not exists idx_group_open on t_group (platform, open_id);
 
--- 成员关系
+-- 基本成员关系
 create table if not exists t_membership
 (
     id           bigserial primary key,
@@ -71,7 +103,7 @@ $$
     end
 $$;
 
--- 订阅/功能开关
+-- 基本订阅/功能开关
 create table if not exists t_subscription
 (
     id            bigserial primary key,
