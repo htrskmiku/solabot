@@ -7,12 +7,15 @@ import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import com.arth.bot.core.database.mapper.PjskBindingMapper;
 import com.arth.bot.plugins.Plugin;
-import com.arth.bot.plugins.pjsk.helper.Mysekai;
+import com.arth.bot.plugins.pjsk.func.Mysekai;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.nio.file.Path;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -21,27 +24,6 @@ import java.util.List;
 @BotPlugin({"pjsk"})
 @RequiredArgsConstructor
 public class Pjsk extends Plugin {
-
-    private final Sender sender;
-    private final ActionChainBuilder actionChainBuilder;
-    private final PjskBindingMapper pjskBindingMapper;
-    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter
-            .ofPattern("yyyy-MM-dd HH:mm:ss")
-            .withZone(ZoneId.of("Asia/Shanghai"));
-
-    @Value("${app.client-access-network-endpoint}")
-    String networkEndpoint;
-    @Value("${app.api-path.plugin.pjsk.root}")
-    String rootPath;
-    @Value("${app.api-path.plugin.pjsk.mysekai.map}")
-    String mapPath;
-    @Value("${app.api-path.plugin.pjsk.mysekai.overview}")
-    String overviewPath;
-    @Value("${app.local-path.pjsk-mysekai.map}")
-    String localMapPath;
-
-    private volatile CoreBeanContext ctx;
-
 
     @Getter
     public final String helpText = "请通过 /help 查看 pjsk 模块具体的命令";
@@ -57,6 +39,12 @@ public class Pjsk extends Plugin {
     public void help(ParsedPayloadDTO payload) {
         sender.replyText(payload, helpText);
     }
+
+    // ***** ============= Suite ============= *****
+
+
+
+    // ***** ============= Mysekai ============= *****
 
     @BotCommand({"绑定", "bind"})
     public void bind(ParsedPayloadDTO payload, List<String> args) {
@@ -77,6 +65,38 @@ public class Pjsk extends Plugin {
     // ***** ============= ctx ============= *****
     // ***** ============= ctx ============= *****
 
+    private volatile CoreBeanContext ctx;
+
+    private final Sender sender;
+    private final WebClient webClient;
+    private final ActionChainBuilder actionChainBuilder;
+    private final PjskBindingMapper pjskBindingMapper;
+    private final ObjectMapper objectMapper;
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm:ss")
+            .withZone(ZoneId.of("Asia/Shanghai"));
+
+    @Value("${app.client-access-network-endpoint}")
+    String networkEndpoint;
+    @Value("${app.api-path.plugin.pjsk.root}")
+    String rootApiPath;
+    @Value("${app.api-path.plugin.pjsk.mysekai.map}")
+    String mapApiPath;
+    @Value("${app.api-path.plugin.pjsk.mysekai.overview}")
+    String overviewApiPath;
+    @Value("${app.local-path.pjsk-resource.dynamic.mysekai.map}")
+    String localMapPath;
+    @Value("${app.local-path.pjsk-resource.dynamic.mysekai.overview}")
+    String localOverviewPath;
+    @Value("${app.local-path.pjsk-resource.static.master-data.root}")
+    private String masterDataPath;
+    @Value("${app.parameter.plugin.pjsk.external-api.hrk.suite-api}")
+    private String suiteApi;
+    @Value("${app.parameter.plugin.pjsk.external-api.hrk.mysekai-api}")
+    private String mysekaiApi;
+    @Value("${app.parameter.plugin.pjsk.external-api.uni.thumbnail-api}")
+    private String thumbnailApi;
+
     /**
      * 懒汉式线程安全获取 ctx
      *
@@ -88,14 +108,21 @@ public class Pjsk extends Plugin {
                 if (ctx == null) {
                     ctx = new CoreBeanContext(
                             sender,
+                            webClient,
                             actionChainBuilder,
                             pjskBindingMapper,
+                            objectMapper,
                             dateTimeFormatter,
                             networkEndpoint,
-                            rootPath,
-                            mapPath,
-                            overviewPath,
-                            localMapPath
+                            rootApiPath,
+                            mapApiPath,
+                            overviewApiPath,
+                            Path.of(localMapPath).toAbsolutePath().normalize(),
+                            Path.of(localOverviewPath).toAbsolutePath().normalize(),
+                            Path.of(masterDataPath).toAbsolutePath().normalize(),
+                            suiteApi,
+                            mysekaiApi,
+                            thumbnailApi
                     );
                 }
             }
@@ -105,25 +132,39 @@ public class Pjsk extends Plugin {
 
     public interface BeanContext {
         Sender sender();
+        WebClient webClient();
         ActionChainBuilder actionChainBuilder();
         PjskBindingMapper pjskBindingMapper();
+        ObjectMapper objectMapper();
         DateTimeFormatter dateTimeFormatter();
         String networkEndpoint();
-        String rootPath();
-        String mapPath();
-        String overviewPath();
-        String localMapPath();
+        String rootApiPath();
+        String mapApiPath();
+        String overviewApiPath();
+        Path localMapPath();
+        Path localOverviewPath();
+        Path masterDataPath();
+        String suiteApi();
+        String mysekaiApi();
+        String thumbnailApi();
     }
 
     public record CoreBeanContext(
             Sender sender,
+            WebClient webClient,
             ActionChainBuilder actionChainBuilder,
             PjskBindingMapper pjskBindingMapper,
+            ObjectMapper objectMapper,
             DateTimeFormatter dateTimeFormatter,
             String networkEndpoint,
-            String rootPath,
-            String mapPath,
-            String overviewPath,
-            String localMapPath) implements BeanContext {
+            String rootApiPath,
+            String mapApiPath,
+            String overviewApiPath,
+            Path localMapPath,
+            Path localOverviewPath,
+            Path masterDataPath,
+            String suiteApi,
+            String mysekaiApi,
+            String thumbnailApi) implements BeanContext {
     }
 }

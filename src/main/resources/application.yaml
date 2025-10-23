@@ -19,15 +19,45 @@ app:
           map: "/{region}/mysekai/{id}/map"
           overview: "/{region}/mysekai/{id}/overview"
 
+  local-path:
+    pjsk-resource:
+      static:
+        master-data:
+          root: "/static/pjsk/master_data"
+          jp: "/static/pjsk/master_data/jp"
+
+      dynamic:
+        mysekai:
+          root: "/dynamic/pjsk_user_data/mysekai/draw"
+          map: "/dynamic/pjsk_user_data/mysekai/draw/map/"
+          overview: "/dynamic/pjsk_user_data/mysekai/draw/overview/"
+
+  parameter:
+    cache:
+      tmp-img:
+        ttl: 3  # min
+        max-size: 26214400
+      gallery-metadata-ttl: 6  # hour
+
+    plugin:
+      pjsk:
+        external-api:
+          hrk:
+            suite-api: "https://suite-api.haruki.seiunx.com/public/{region}/suite/{id}"
+            mysekai-api: "https://suite-api.haruki.seiunx.com/public/{region}/mysekai/{id}"
+            jp-master-data-api: "https://raw.githubusercontent.com/Team-Haruki/haruki-sekai-master/blob/main/versions/current_version.json"
+          uni:
+            thumbnail-api: "https://assets.unipjsk.com/startapp/thumbnail/chara/{assetbundle_name}_{status}.png"
+          sekai-best:
+            thumbnail-api: "https://storage.sekai.best/sekai-jp-assets/thumbnail/chara/{assetbundle_name}_{status}.webp"
+
       kan:
         metadata-api: "https://bot.teaphenby.com/api/galleries"
-        pic-path: "https://bot.teaphenby.com/api/galleries"
+        pic-api-path: "https://bot.teaphenby.com/api/gallery/"
         auth-token: "arthur-stat"
 
-  local-path:
-    pjsk-mysekai:
-      map: "/dynamic/pjsk_user_data/mysekai/draw/map/"
-      overview: "/dynamic/pjsk_user_data/mysekai/draw/overview/"
+      live:
+        query-time-gap: 5
 
 
 logging:
@@ -35,10 +65,9 @@ logging:
     root: INFO
     com.arth.bot: INFO
 
-onebot:
-  websocket:
-    suffix: /onebot/v11/ws
-    allowed-origins: "*"
+websocket:
+  suffix: "/onebot/v11/ws"
+  allowed-origins: "*"
 
 #core:
 #  business-exception:
@@ -62,6 +91,13 @@ spring:
 
   cache:
     type: redis
+
+  ws-container:
+    max-text-message-buffer-size: 5242880
+    max-binary-message-buffer-size: 5242880
+    max-session-idle-timeout: 6000
+
+  task-scheduler-pool-size: 1
 
 mybatis-plus:
   configuration:

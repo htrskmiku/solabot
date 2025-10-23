@@ -1,7 +1,6 @@
 package com.arth.bot.adapter.controller.http;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.redis.core.RedisTemplate;

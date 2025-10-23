@@ -1,12 +1,14 @@
 # solabot
 
-仅为重庆大学 PJSK 同好群「 翼遥啤酒烧烤大排档」设计的 bot 后端。
+仅为重庆大学 PJSK 同好群「翼遥啤酒烧烤大排档」设计的 bot 后端。
 
 # version
 
 OpenJDK 17+
 
 Spring Boot 3.5
+
+Spring WebFlux 3.5 (WebClient only)
 
 Docker 27.5
 

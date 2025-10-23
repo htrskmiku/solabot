@@ -38,15 +38,16 @@ public class GalleryCacheService {
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    private static final long TTL_HOURS = 6L;  // HOURS
+    @Value("${app.parameter.cache.gallery-metadata-ttl}")
+    private long ttl;  // HOURS
     private static final String GALLERY_GLOBAL_MARKER = "gallery:cache"; // 全量更新标志（带 TTL）
     private static final String GALLERY_LOCK_PREFIX = "gallery:lock:";   // per-role lock 前缀
 
-    @Value("${app.api-path.plugin.kan.metadata-api}")
+    @Value("${app.parameter.plugin.kan.metadata-api}")
     private String metadataApi;
-    @Value("${app.api-path.plugin.kan.pic-path}")
-    private String picApiPath = "https://bot.teaphenby.com/api/gallery/";
-    @Value("${app.api-path.plugin.kan.auth-token}")
+    @Value("${app.parameter.plugin.kan.pic-api-path}")
+    private String picApiPath;
+    @Value("${app.parameter.plugin.kan.auth-token}")
     private String authToken;
 
     // 剩余过期时间大于该值时，不更新
@@ -213,7 +214,7 @@ public class GalleryCacheService {
 
                 // 为两个 key 设置随机化 TTL，防止所有 role 同步过期
                 long extraSeconds = ThreadLocalRandom.current().nextLong(300, 1800); // 5~30 min
-                long ttlSeconds = TimeUnit.HOURS.toSeconds(TTL_HOURS) + extraSeconds;
+                long ttlSeconds = TimeUnit.HOURS.toSeconds(ttl) + extraSeconds;
                 try {
                     redisTemplate.expire(finalHashKey, ttlSeconds, TimeUnit.SECONDS);
                     redisTemplate.expire(finalSortedSetKey, ttlSeconds, TimeUnit.SECONDS);
@@ -247,7 +248,7 @@ public class GalleryCacheService {
         // 全部角色更新完毕后，设置全局标志键并加 TTL，作为快速检查的依据
         try {
             long globalExtra = ThreadLocalRandom.current().nextLong(60, 600); // 1~10 min
-            long globalTtlSeconds = TimeUnit.HOURS.toSeconds(TTL_HOURS) + globalExtra;
+            long globalTtlSeconds = TimeUnit.HOURS.toSeconds(ttl) + globalExtra;
             // 设置为简单的字符串并设置 TTL；该键仅用于快速判定是否需要再次刷新
             redisTemplate.opsForValue().set(GALLERY_GLOBAL_MARKER, String.valueOf(System.currentTimeMillis()));
             redisTemplate.expire(GALLERY_GLOBAL_MARKER, globalTtlSeconds, TimeUnit.SECONDS);

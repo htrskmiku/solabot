@@ -1,7 +1,7 @@
 package com.arth.bot.plugins;
 
 import com.arth.bot.adapter.sender.Sender;
-import com.arth.bot.adapter.session.SessionRegistry;
+import com.arth.bot.adapter.io.SessionRegistry;
 import com.arth.bot.core.authorization.annotation.DirectAuthInterceptor;
 import com.arth.bot.core.authorization.model.AuthMode;
 import com.arth.bot.core.authorization.model.AuthScope;
@@ -22,13 +22,12 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.socket.WebSocketSession;
+import reactor.core.publisher.Mono;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -49,12 +48,14 @@ public class Live extends Plugin {
     private final StreamerSubscriptionService subscriptionService;
     private final TaskScheduler taskScheduler;
     private final SessionRegistry sessionRegistry;
+    private final WebClient webClient;
 
     final Map<String, Long> aliasToStreamId = new HashMap<>();
     final Map<Long, Boolean> isLiving = new HashMap<>();
     final Map<Long, List<UserInfo>> streamIdToSubscription = new HashMap<>();
 
-    private static final int QUERY_GAP = 3;  // min
+    @Value("${app.parameter.plugin.live.query-time-gap}")
+    private int queryTimeGap;  // min
 
     @Getter
     public final String helpText = """
@@ -92,7 +93,7 @@ public class Live extends Plugin {
         }
 
         // 启动定时监听任务（通过 TaskScheduler）
-        taskScheduler.schedule(this::checkAllLiveStatus, tc -> Instant.now().plus(Duration.ofMinutes(QUERY_GAP)));
+        taskScheduler.schedule(this::checkAllLiveStatus, tc -> Instant.now().plus(Duration.ofMinutes(queryTimeGap)));
     }
 
     @BotCommand("index")
@@ -353,23 +354,15 @@ public class Live extends Plugin {
      */
     private JsonNode requestAPI(long streamId) {
         try {
-            URL url = new URL("https://api.live.bilibili.com/room/v1/Room/room_init?id=" + streamId);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
-
-            return objectMapper.readTree(response.toString());
+            return webClient.get()
+                    .uri("https://api.live.bilibili.com/room/v1/Room/room_init?id=" + streamId)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .flatMap(json -> Mono.fromCallable(() -> objectMapper.readTree(json)))
+                    .block(Duration.ofSeconds(5));
         } catch (Exception e) {
-            throw new ExternalServiceErrorException("network error", e.getMessage());
+            log.error("Failed to request API", e);
+            throw new ExternalServiceErrorException("Failed to request API", e.getMessage());
         }
     }
 

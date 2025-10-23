@@ -1,4 +1,4 @@
-package com.arth.bot.plugins.pjsk.helper;
+package com.arth.bot.plugins.pjsk.func;
 
 import com.arth.bot.adapter.sender.action.ActionChainBuilder;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
@@ -52,12 +52,12 @@ public final class Mysekai {
 
         region = file.getFileName().toString().substring(0, 2);
         String overviewImgUrl = ctx.networkEndpoint() +
-                ctx.rootPath() +
-                ctx.overviewPath().replace("{region}", region).replace("{id}", pjskId);
+                ctx.rootApiPath() +
+                ctx.overviewApiPath().replace("{region}", region).replace("{id}", pjskId);
 
         String mapImgUrl = ctx.networkEndpoint() +
-                ctx.rootPath() +
-                ctx.mapPath().replace("{region}", region).replace("{id}", pjskId);
+                ctx.rootApiPath() +
+                ctx.mapApiPath().replace("{region}", region).replace("{id}", pjskId);
 
         ActionChainBuilder builder = ctx.actionChainBuilder().create().setReplay(payload.getMessageId())
                 .text("MySekai 数据更新于" + updatedTime)
@@ -116,6 +116,10 @@ public final class Mysekai {
             ctx.sender().replyText(payload, "your pjsk id is " + binding.getPjskId());
         }
     }
+
+    // ***** ============= helper ============= *****
+    // ***** ============= helper ============= *****
+    // ***** ============= helper ============= *****
 
     private static LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId, String serverRegion) {
         LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();

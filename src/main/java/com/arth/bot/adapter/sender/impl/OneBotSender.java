@@ -3,7 +3,7 @@ package com.arth.bot.adapter.sender.impl;
 import com.arth.bot.adapter.fetcher.EchoWaiter;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.SimpleActionBuilder;
-import com.arth.bot.adapter.session.SessionRegistry;
+import com.arth.bot.adapter.io.SessionRegistry;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

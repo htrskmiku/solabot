@@ -46,3 +46,6 @@ Thumbs.db
 ### Python ###
 __pycache__/
 *.py[cod]
+
+### static resource ###
+static/pjsk/

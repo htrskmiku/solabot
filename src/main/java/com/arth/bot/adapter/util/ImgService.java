@@ -10,8 +10,13 @@ import com.arth.bot.core.common.exception.InvalidCommandArgsException;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -22,48 +27,45 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.BufferedInputStream;
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PushbackInputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ImgService {
 
     private final Sender sender;
     private final ReplyFetcher replyFetcher;
+    private final WebClient webClient;
 
     /**
      * 从 url 下载一张静态图片，返回 BufferedImage
      * 针对动态图片，本方法只能获取首帧
-     * @param aUrl
+     *
+     * @param url
      * @return
      */
-    public BufferedImage getBufferedImg(String aUrl) {
-        try {
-            URL url = new URL(aUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(10000);
-
-            try (InputStream inputStream = connection.getInputStream()) {
-                return ImageIO.read(inputStream);
-            } finally {
-                connection.disconnect();
-            }
-        } catch (Exception e) {
+    public BufferedImage getBufferedImg(String url) {
+        byte[] bytes = webClient.get()
+                .uri(url)
+                .accept(MediaType.IMAGE_JPEG, MediaType.IMAGE_PNG, MediaType.IMAGE_GIF)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, rsp -> rsp.createException().flatMap(Mono::error))
+                .bodyToMono(byte[].class)
+                .timeout(Duration.ofSeconds(10))
+                .block();  // 让阻塞发生在 MVC 业务线程
+        if (bytes == null) return null;
+        try (ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
+            return ImageIO.read(in);  // 阻塞操作在业务线程执行，不要卡住 Netty I/O 线程
+        } catch (IOException e) {
             return null;
         }
     }
@@ -72,6 +74,7 @@ public class ImgService {
      * 从输入流读取一张静态图片，返回 BufferedImage
      * 注意，本方法不会主动关闭传入的 InputStream
      * 解析逻辑与 getBufferedImg(String) 保持一致
+     *
      * @param inputStream
      * @return
      */
@@ -86,6 +89,7 @@ public class ImgService {
     /**
      * 从 url 下载多张静态图片，返回 List<BufferedImage>
      * 针对动态图片，本方法只能获取首帧
+     *
      * @param urls
      * @return
      */
@@ -100,6 +104,7 @@ public class ImgService {
     /**
      * 从多输入流读取多张静态图片，返回 List<BufferedImage>
      * 注意，本方法不会主动关闭传入的 InputStream
+     *
      * @param inputs
      * @return
      */
@@ -113,26 +118,18 @@ public class ImgService {
 
     /**
      * 从 url 下载一张图片，返回二进制数据 byte[]
-     * @param aUrl
+     *
+     * @param url
      * @return
      */
-    public byte[] getBytes(String aUrl) {
+    public byte[] getBytes(String url) {
         try {
-            URL url = new URL(aUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(10000);
-
-            try (InputStream in = conn.getInputStream();
-                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = in.read(buf)) != -1) baos.write(buf, 0, n);
-                return baos.toByteArray();
-            } finally {
-                conn.disconnect();
-            }
+            return webClient.get()
+                    .uri(url)
+                    .accept(MediaType.APPLICATION_OCTET_STREAM)
+                    .retrieve()
+                    .bodyToMono(byte[].class)
+                    .block(Duration.ofSeconds(10));
         } catch (Exception e) {
             return null;
         }
@@ -141,6 +138,7 @@ public class ImgService {
     /**
      * 从输入流读取全部二进制数据，返回 byte[]
      * 注意，本方法不会主动关闭传入的 InputStream
+     *
      * @param inputStream
      * @return
      */
@@ -153,12 +151,14 @@ public class ImgService {
             while ((n = inputStream.read(buf)) != -1) baos.write(buf, 0, n);
             return baos.toByteArray();
         } catch (Exception e) {
+            log.error("HTTP error: ", e);
             return null;
         }
     }
 
     /**
      * 从 url 下载多张图片，返回二进制数据 byte[][]
+     *
      * @param urls
      * @return
      */
@@ -173,6 +173,7 @@ public class ImgService {
     /**
      * 从多个输入流读取多份二进制数据，返回 byte[][]。
      * 注意，本方法不会主动关闭传入的 InputStream
+     *
      * @param inputs
      * @return
      */
@@ -186,12 +187,13 @@ public class ImgService {
 
     /**
      * 从 url 下载一份 GIF 的二进制流并将流解析为可逐帧操作的数据结构
-     * @param aUrl
+     *
+     * @param url
      * @return
      * @throws IOException
      */
-    public GifData getGifFlattened(String aUrl) throws IOException {
-        byte[] inBytes = getBytes(aUrl);
+    public GifData getGifFlattened(String url) throws IOException {
+        byte[] inBytes = getBytes(url);
         if (inBytes == null || inBytes.length == 0) throw new IOException("empty file");
         GifData g = new GifData();
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(inBytes))) {
@@ -218,7 +220,8 @@ public class ImgService {
                             canvasH = parseIntSafe(lsd, "logicalScreenHeight", 0);
                         }
                     }
-                } catch (Exception ignore) {}
+                } catch (Exception ignore) {
+                }
             }
             if (canvasW <= 0 || canvasH <= 0) {
                 // 遍历每帧，基于 ImageDescriptor 的 (x,y,w,h) 求最大包围盒
@@ -302,6 +305,7 @@ public class ImgService {
      * 从输入流读取一份 GIF 的二进制流并将流解析为可逐帧操作的数据结构
      * 解析逻辑与 getGifFlattened(String) 保持完全一致（仅读取数据来源不同）
      * 注意，本方法不会主动关闭传入的 InputStream
+     *
      * @param inputStream
      * @return
      * @throws IOException
@@ -334,7 +338,8 @@ public class ImgService {
                             canvasH = parseIntSafe(lsd, "logicalScreenHeight", 0);
                         }
                     }
-                } catch (Exception ignore) {}
+                } catch (Exception ignore) {
+                }
             }
             if (canvasW <= 0 || canvasH <= 0) {
                 // 遍历每帧，基于 ImageDescriptor 的 (x,y,w,h) 求最大包围盒
@@ -416,6 +421,7 @@ public class ImgService {
 
     /**
      * 从 url 下载多份 GIF 的二进制流并将流解析为可逐帧操作的数据结构
+     *
      * @param urls
      * @return
      * @throws IOException
@@ -430,6 +436,7 @@ public class ImgService {
 
     /**
      * 从多个输入流读取并解析多份 GIF，返回 List<GifData>
+     *
      * @param inputs
      * @return
      * @throws IOException
@@ -444,6 +451,7 @@ public class ImgService {
 
     /**
      * 从 OneBot v11 报文中提取图片媒体资源的 url
+     *
      * @param payload
      * @param printPrompt
      * @return
@@ -550,7 +558,8 @@ public class ImgService {
                     }
                 }
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
         return 0;
     }
 
@@ -563,7 +572,8 @@ public class ImgService {
                 String delay = gce.getAttribute("delayTime");
                 return Integer.parseInt(delay);
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
         return 10;
     }
 
@@ -576,32 +586,30 @@ public class ImgService {
 
     /**
      * 打开一个 url 并返回可读的 InputStream，stream.close() 会在关闭时断开底层连接
-     * @param aUrl
+     *
+     * @param url
      * @return InputStream
      * @throws IOException
      */
-    public InputStream openUrlInputStream(String aUrl) throws IOException {
-        URL url = new URL(aUrl);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(10000);
-        InputStream is = conn.getInputStream();
-        return new FilterInputStream(is) {
-            @Override
-            public void close() throws IOException {
-                try {
-                    super.close();
-                } finally {
-                    conn.disconnect();
-                }
-            }
-        };
+    public InputStream openUrlInputStream(String url) throws IOException {
+        try {
+            Resource resource = webClient.get()
+                    .uri(url)
+                    .accept(MediaType.APPLICATION_OCTET_STREAM)
+                    .retrieve()
+                    .bodyToMono(Resource.class)
+                    .block(Duration.ofSeconds(10));
+
+            return resource.getInputStream();
+        } catch (Exception e) {
+            throw new IOException("Failed to fetch URL: " + url, e);
+        }
     }
 
     /**
      * 为多个 url 打开 InputStream 列表
      * 注意，本方法不会主动关闭传入的 InputStream
+     *
      * @param urls
      * @return
      * @throws IOException
@@ -615,6 +623,7 @@ public class ImgService {
     /**
      * 根据二进制数据判断图片格式（魔数判断）
      * 支持 gif/png/jpeg/bmp/webp，未识别则返回 "unknown"。
+     *
      * @param data 完整的文件二进制（建议至少前 12 字节）
      * @return 文件类型字符串，如 "gif"、"png"、"jpeg"、"bmp"、"webp"、"unknown"
      */
@@ -627,7 +636,8 @@ public class ImgService {
         }
         // PNG
         if (data.length >= 8) {
-            if ((data[0] & 0xFF) == 0x89 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G' && data[4] == 0x0D && data[5] == 0x0A && data[6] == 0x1A && data[7] == 0x0A) return "png";
+            if ((data[0] & 0xFF) == 0x89 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G' && data[4] == 0x0D && data[5] == 0x0A && data[6] == 0x1A && data[7] == 0x0A)
+                return "png";
         }
         // JPEG
         if ((data[0] & 0xFF) == 0xFF && (data[1] & 0xFF) == 0xD8 && (data[2] & 0xFF) == 0xFF) return "jpeg";
@@ -645,6 +655,7 @@ public class ImgService {
     /**
      * 根据输入流读取全部二进制后判断图片格式（此方法会消耗并读取完整输入流）
      * 建议使用 openUrlInputStream + getBytes(...) 读取后再调用 detectImageType(byte[]) 以避免重复读取
+     *
      * @param in
      * @return
      * @throws IOException

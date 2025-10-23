@@ -1,5 +1,6 @@
 package com.arth.bot.core.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
@@ -16,11 +17,15 @@ public class WebSocketContainerConfig {
      * @return
      */
     @Bean
-    public ServletServerContainerFactoryBean createWebSocketContainer() {
+    public ServletServerContainerFactoryBean createWebSocketContainer(
+            @Value("${spring.ws-container.max-text-message-buffer-size}") int maxTextMessageBufferSize,
+            @Value("${spring.ws-container.max-binary-message-buffer-size}") int maxBinaryMessageBufferSize,
+            @Value("${spring.ws-container.max-session-idle-timeout}") long maxSessionIdleTimeout
+            ) {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
-        container.setMaxTextMessageBufferSize(5 * 1024 * 1024);   // 5 MB
-        container.setMaxBinaryMessageBufferSize(5 * 1024 * 1024); // 5 MB
-        container.setMaxSessionIdleTimeout(1 * 60 * 1000L);       // 1 min
+        container.setMaxTextMessageBufferSize(maxTextMessageBufferSize);
+        container.setMaxBinaryMessageBufferSize(maxBinaryMessageBufferSize);
+        container.setMaxSessionIdleTimeout(maxSessionIdleTimeout);
         return container;
     }
 }

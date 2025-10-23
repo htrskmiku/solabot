@@ -1,5 +1,6 @@
 package com.arth.bot.core.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.TaskScheduler;
@@ -9,9 +10,9 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 public class SchedulerConfig {
 
     @Bean
-    public TaskScheduler taskScheduler() {
+    public TaskScheduler taskScheduler(@Value("${spring.task-scheduler-pool-size}") int poolSize) {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(1);
+        scheduler.setPoolSize(poolSize);
         scheduler.setThreadNamePrefix("scheduled-task-");
         scheduler.initialize();
         return scheduler;

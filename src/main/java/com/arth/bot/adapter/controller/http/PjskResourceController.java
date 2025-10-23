@@ -1,5 +1,7 @@
 package com.arth.bot.adapter.controller.http;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
@@ -17,7 +19,12 @@ import java.nio.file.Path;
 @RequestMapping("${app.api-path.plugin.pjsk.root}")
 public class PjskResourceController {
 
-    private static final Path BASE_DIR = Path.of("dynamic/pjsk_user_data/mysekai/draw").toAbsolutePath().normalize();
+    private final Path BASE_DIR;
+
+    @Autowired
+    private PjskResourceController(@Value("${app.local-path.pjsk-resource.dynamic.mysekai.root}") String rootPath) {
+        BASE_DIR = Path.of(rootPath).toAbsolutePath().normalize();
+    }
 
     @GetMapping("${app.api-path.plugin.pjsk.mysekai.map}")
     public ResponseEntity<Resource> getMysekaiMap(@PathVariable String region, @PathVariable String id) throws IOException {
@@ -30,7 +37,7 @@ public class PjskResourceController {
     }
 
     /**
-     * 安全的响应构造方法，避免路径边路攻击
+     * 安全的响应构造方法，避免路径遍历攻击
      *
      * @param type
      * @param region

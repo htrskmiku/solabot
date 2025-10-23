@@ -1,7 +1,7 @@
 package com.arth.bot.core.common.exception.handler;
 
 import com.arth.bot.adapter.sender.Sender;
-import com.arth.bot.adapter.session.SessionRegistry;
+import com.arth.bot.adapter.io.SessionRegistry;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
