@@ -14,23 +14,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 @RestController
-@RequestMapping("/pjsk/resource")
+@RequestMapping("${app.api-path.plugin.pjsk.root}")
 public class PjskResourceController {
 
     private static final Path BASE_DIR = Path.of("dynamic/pjsk_user_data/mysekai/draw").toAbsolutePath().normalize();
 
-    @GetMapping("/{region}/mysekai/{id}/map")
+    @GetMapping("${app.api-path.plugin.pjsk.mysekai.map}")
     public ResponseEntity<Resource> getMysekaiMap(@PathVariable String region, @PathVariable String id) throws IOException {
         return buildPjskResourceUrlSafely("map", region, id);
     }
 
-    @GetMapping("/{region}/mysekai/{id}/overview")
+    @GetMapping("${app.api-path.plugin.pjsk.mysekai.overview}")
     public ResponseEntity<Resource> getMysekaiOverview(@PathVariable String region, @PathVariable String id) throws IOException {
         return buildPjskResourceUrlSafely("overview", region, id);
     }
 
     /**
-     * 安全的方法
+     * 安全的响应构造方法，避免路径边路攻击
      *
      * @param type
      * @param region

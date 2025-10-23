@@ -1,6 +1,7 @@
 package com.arth.bot.adapter.controller.http;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 
 @RestController
-@RequestMapping("/cache/resource")
+@RequestMapping("${app.api-path.cache.root}")
 @RequiredArgsConstructor
 public class CachedResourceController {
 
@@ -28,7 +29,7 @@ public class CachedResourceController {
      * @param uuid
      * @return
      */
-    @GetMapping("/imgs/png/{uuid}")
+    @GetMapping("${app.api-path.cache.img.png}" + "{uuid}")
     public ResponseEntity<Resource> getPng(@PathVariable String uuid) {
         // 400: 校验 uuid 格式
         if (!uuid.matches("[a-zA-Z0-9_-]+")) return ResponseEntity.badRequest().build();
@@ -54,7 +55,7 @@ public class CachedResourceController {
      * @param uuid
      * @return
      */
-    @GetMapping("/imgs/gif/{uuid}")
+    @GetMapping("${app.api-path.cache.img.gif}" + "{uuid}")
     public ResponseEntity<Resource> getGif(@PathVariable String uuid) {
         // 400: 校验 uuid 格式
         if (!uuid.matches("[a-zA-Z0-9_-]+")) return ResponseEntity.badRequest().build();

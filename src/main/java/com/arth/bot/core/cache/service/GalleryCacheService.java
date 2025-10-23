@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -41,9 +42,12 @@ public class GalleryCacheService {
     private static final String GALLERY_GLOBAL_MARKER = "gallery:cache"; // 全量更新标志（带 TTL）
     private static final String GALLERY_LOCK_PREFIX = "gallery:lock:";   // per-role lock 前缀
 
-    private static final String GET_PIC_METADATA_API = "https://bot.teaphenby.com/api/galleries";
-    private static final String BASE_GET_PIC_API = "https://bot.teaphenby.com/api/gallery/";
-    private static final String AUTH_TOKEN = "arthur-stat";
+    @Value("${app.api-path.plugin.kan.metadata-api}")
+    private String metadataApi;
+    @Value("${app.api-path.plugin.kan.pic-path}")
+    private String picApiPath = "https://bot.teaphenby.com/api/gallery/";
+    @Value("${app.api-path.plugin.kan.auth-token}")
+    private String authToken;
 
     // 剩余过期时间大于该值时，不更新
     private static final long REFRESH_THRESHOLD_SECONDS = 300L;  // 5 minutes
@@ -79,11 +83,11 @@ public class GalleryCacheService {
             throw new InternalServerErrorException("Missing 'path' in metadata for pid=" + pid);
         }
         String path = pathObj.toString().trim();
-        String url = BASE_GET_PIC_API + path;
+        String url = picApiPath + path;
 
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + AUTH_TOKEN);
+            headers.set("Authorization", "Bearer " + authToken);
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<byte[]> resp = restTemplate.exchange(url, HttpMethod.GET, entity, byte[].class);
 
@@ -124,10 +128,10 @@ public class GalleryCacheService {
         Map<String, Map<String, Object>> galleries;
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + AUTH_TOKEN);
+            headers.set("Authorization", "Bearer " + authToken);
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<Map<String, Map<String, Object>>> response = restTemplate.exchange(
-                    GET_PIC_METADATA_API, HttpMethod.GET, entity,
+                    metadataApi, HttpMethod.GET, entity,
                     new ParameterizedTypeReference<>() {});
             galleries = response.getBody();
             if (galleries == null || galleries.isEmpty()) {
@@ -263,7 +267,7 @@ public class GalleryCacheService {
         if (path == null) {
             throw new ExternalServiceErrorException("path not found for pid: " + pid);
         }
-        return BASE_GET_PIC_API + path;
+        return picApiPath + path;
     }
 
     public String getRandomPicUrl(String role) {
@@ -272,7 +276,7 @@ public class GalleryCacheService {
         if (path == null) {
             throw new ExternalServiceErrorException("path not found in random pic metadata");
         }
-        return BASE_GET_PIC_API + path;
+        return picApiPath + path;
     }
 
     public Map<String, Object> getPicMetadataByPid(String role, String pid) {

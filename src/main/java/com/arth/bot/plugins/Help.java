@@ -19,7 +19,7 @@ public class Help extends Plugin {
     @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
         ForwardChainBuilder building = forwardChainBuilder.create().addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                        这里是 solabot，一只具有独立 java 后端的 bot，本世代为「ickk」，主要为翼遥烤群（某高校 pjsk 同好群）而设计，目前支持以下三个模块：
+                        这里是 solabot，一只具有独立 java 后端的 bot，本世代为「ickk」，主要为翼遥烤群（某高校 pjsk 同好群）而设计，目前支持以下几个模块：
                           1. pjsk 啤酒烧烤
                           2. img 图片处理
                           3. 看看你的

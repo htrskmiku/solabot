@@ -8,7 +8,7 @@ import com.arth.bot.core.invoker.annotation.BotPlugin;
 import com.arth.bot.plugins.Plugin;
 import lombok.RequiredArgsConstructor;
 
-@BotPlugin({"看mnr", "看花里实乃理", "看实乃理", "看花", "看花花"})
+@BotPlugin({"看mnr", "看花里实乃理", "看实乃理", "看花", "看花花", "看花栗鼠", "看小实", "看小花"})
 @RequiredArgsConstructor
 public class KanMnr extends Plugin {
 

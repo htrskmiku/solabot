@@ -3,7 +3,32 @@ server:
   port: 8848
 
 app:
-  client-access-url: "${CLIENT_ACCESS_URL:localhost}"
+  client-access-network-endpoint: "http://192.168.1.3:8848"
+
+  api-path:
+    cache:
+      root: "/cache/resource"
+      img:
+        png: "/imgs/png/"
+        gif: "/imgs/gif/"
+
+    plugin:
+      pjsk:
+        root: "/pjsk/resource"
+        mysekai:
+          map: "/{region}/mysekai/{id}/map"
+          overview: "/{region}/mysekai/{id}/overview"
+
+      kan:
+        metadata-api: "https://bot.teaphenby.com/api/galleries"
+        pic-path: "https://bot.teaphenby.com/api/galleries"
+        auth-token: "arthur-stat"
+
+  local-path:
+    pjsk-mysekai:
+      map: "/dynamic/pjsk_user_data/mysekai/draw/map/"
+      overview: "/dynamic/pjsk_user_data/mysekai/draw/overview/"
+
 
 logging:
   level:

@@ -27,11 +27,8 @@ public class Test extends Plugin {
     private final ForwardChainBuilder forwardChainBuilder;
     private final ReplyFetcher replyFetcher;
 
-    @Value("${server.port}")
-    private String port;
-
-    @Value("${app.client-access-url}")
-    private String clientAccessUrl;
+    @Value("${app.client-access-network-endpoint}")
+    private String endpoint;
 
     @Getter
     public final String helpText = """
@@ -110,7 +107,7 @@ public class Test extends Plugin {
      */
     @BotCommand("tu")
     public void tu(ParsedPayloadDTO payload) {
-        String url = "http://" + clientAccessUrl + ":" + port + "/saki.jpg";
+        String url = endpoint + "/saki.jpg";
         sender.replyImage(payload, List.of(url, url, url));
     }
 
@@ -121,7 +118,7 @@ public class Test extends Plugin {
      */
     @BotCommand("shipin")
     public void shipin(ParsedPayloadDTO payload) {
-        String url = "http://" + clientAccessUrl + ":" + port + "/icsk.mp4";
+        String url = endpoint + "/icsk.mp4";
         sender.sendVideo(payload, url);
     }
 

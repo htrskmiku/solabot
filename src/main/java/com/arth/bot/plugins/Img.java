@@ -8,7 +8,6 @@ import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
-import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,13 +35,14 @@ public class Img extends Plugin {
     private static final int GIF_MIN_CS = 2;      // GIF 最小播放时间间隔
     private static final int GIF_MAX_CS = 65535;  // GIF 最大播放时间间隔
 
-    @Value("${server.port}")
-    private String port;
-
-    @Value("${app.client-access-url}")
-    private String clientAccessUrl;
-
-    private String baseUrl;
+    @Value("${app.client-access-network-endpoint}")
+    private String networkEndpoint;
+    @Value("${app.api-path.cache.root}")
+    private String rootPath;
+    @Value("${app.api-path.cache.img.png}")
+    private String pngPath;
+    @Value("${app.api-path.cache.img.gif}")
+    private String gifPath;
 
     @Getter
     public final String helpText = """
@@ -58,16 +58,12 @@ public class Img extends Plugin {
               - cut: 纯色背景抠图透明底
                 可以跟 <阈值> 参数指定阈值，默认100，阈值表示像素与背景RGB欧氏距离的最大均方误差
               - gray: 转灰度图
+              - invert: 反色
               - mirror: 水平镜像翻转
               - gif: 转gif
                 在QQ里看起来会更像表情包
               - png: 转png
               - check: 检查图片url""";
-
-    @PostConstruct
-    public void init() {
-        this.baseUrl = "http://" + clientAccessUrl + ":" + port;
-    }
 
     @BotCommand("index")
     @Override
@@ -102,7 +98,7 @@ public class Img extends Plugin {
                 gifSymmetryByLeft(List.of(gif));
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = imageCacheService.cacheImage(outBytes);
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + gifPath + uuid);
             } else {
                 // 处理静态图片（PNG/JPEG/...）
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
@@ -113,7 +109,7 @@ public class Img extends Plugin {
                 symmetryByLeft(imgs);
                 // 缓存为 png
                 String uuid = imageCacheService.cacheImage(imgs.get(0), "png");
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + pngPath + uuid);
             }
         }
 
@@ -142,7 +138,7 @@ public class Img extends Plugin {
                 gifSymmetryByRight(List.of(gif));
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = imageCacheService.cacheImage(outBytes);
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + gifPath + uuid);
             } else {
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
                 if (img == null) continue;
@@ -150,7 +146,7 @@ public class Img extends Plugin {
                 imgs.add(img);
                 symmetryByRight(imgs);
                 String uuid = imageCacheService.cacheImage(imgs.get(0), "png");
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + pngPath + uuid);
             }
         }
 
@@ -181,7 +177,7 @@ public class Img extends Plugin {
                 gifSymmetryByUp(List.of(gif));
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = imageCacheService.cacheImage(outBytes);
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + gifPath + uuid);
             } else {
                 // 静态图片：单帧翻转
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
@@ -190,7 +186,7 @@ public class Img extends Plugin {
                 imgs.add(img);
                 symmetryByUp(imgs);
                 String uuid = imageCacheService.cacheImage(imgs.get(0), "png");
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + pngPath + uuid);
             }
         }
 
@@ -220,7 +216,7 @@ public class Img extends Plugin {
                 gifSymmetryByDown(List.of(gif));
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = imageCacheService.cacheImage(outBytes);
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + gifPath + uuid);
             } else {
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
                 if (img == null) continue;
@@ -228,7 +224,7 @@ public class Img extends Plugin {
                 imgs.add(img);
                 symmetryByDown(imgs);
                 String uuid = imageCacheService.cacheImage(imgs.get(0), "png");
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + pngPath + uuid);
             }
         }
 
@@ -312,7 +308,7 @@ public class Img extends Plugin {
                 rotateGif(gif, angle);
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = imageCacheService.cacheImage(outBytes);
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + gifPath + uuid);
             } else {
                 // ---- 静态图片 ----
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
@@ -321,7 +317,7 @@ public class Img extends Plugin {
                 imgs.add(img);
                 rotateImg(imgs, angle);
                 String uuid = imageCacheService.cacheImage(imgs.get(0), "png");
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + pngPath + uuid);
             }
         }
 
@@ -366,7 +362,7 @@ public class Img extends Plugin {
             GifData out = retime(gif, r, reverse);
             byte[] outBytes = writeGifToBytes(out.getFrames(), out.getDelaysCs(), out.getLoopCount());
             String uuid = imageCacheService.cacheImage(outBytes);
-            cacheUrls.add(baseUrl + "/cache/resource/imgs/gif/" + uuid);
+            cacheUrls.add(networkEndpoint +rootPath + gifPath + uuid);
         }
 
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
@@ -411,7 +407,7 @@ public class Img extends Plugin {
                 gifCutout(gif, threshold);
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = imageCacheService.cacheImage(outBytes);
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + gifPath + uuid);
             } else {
                 // 静态图片：保留原有完整逻辑（针对单张图片）
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
@@ -493,7 +489,7 @@ public class Img extends Plugin {
                 }
 
                 String uuid = imageCacheService.cacheImage(imgs.get(0), "png");
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + pngPath + uuid);
             }
         }
 
@@ -521,7 +517,7 @@ public class Img extends Plugin {
                 gifGray(gif);
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = imageCacheService.cacheImage(outBytes);
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + gifPath + uuid);
             } else {
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
                 if (img == null) continue;
@@ -539,7 +535,43 @@ public class Img extends Plugin {
                 g2.dispose();
 
                 String uuid = imageCacheService.cacheImage(outImg, "png");
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + pngPath + uuid);
+            }
+        }
+
+        List<String> cacheUrls = new ArrayList<>();
+        for (String s : cacheUrlsOrdered) if (s != null) cacheUrls.add(s);
+        if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
+    }
+
+    @BotCommand("invert")
+    public void invert(ParsedPayloadDTO payload) throws IOException {
+        List<String> urls = imgService.extractImgUrls(payload, true);
+        if (urls == null || urls.isEmpty()) return;
+
+        int n = urls.size();
+        List<String> cacheUrlsOrdered = new ArrayList<>(Collections.nCopies(n, null));
+
+        for (int i = 0; i < n; i++) {
+            String url = urls.get(i);
+            byte[] data = imgService.getBytes(url);
+            if (data == null || data.length == 0) continue;
+
+            String type = imgService.detectImageType(data);
+
+            if ("gif".equals(type)) {
+                GifData gif = imgService.getGifFlattened(new ByteArrayInputStream(data));
+                if (gif == null) continue;
+                gifInvert(gif);
+                byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
+                String uuid = imageCacheService.cacheImage(outBytes);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + gifPath + uuid);
+            } else {
+                BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
+                if (img == null) continue;
+                invertImage(img);
+                String uuid = imageCacheService.cacheImage(img, "png");
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + pngPath + uuid);
             }
         }
 
@@ -567,7 +599,7 @@ public class Img extends Plugin {
                 gifMirror(gif);
                 byte[] outBytes = writeGifToBytes(gif.getFrames(), gif.getDelaysCs(), gif.getLoopCount());
                 String uuid = imageCacheService.cacheImage(outBytes);
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/gif/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + gifPath + uuid);
             } else {
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
                 if (img == null) continue;
@@ -585,7 +617,7 @@ public class Img extends Plugin {
                 }
 
                 String uuid = imageCacheService.cacheImage(img, "png");
-                cacheUrlsOrdered.set(i, baseUrl + "/cache/resource/imgs/png/" + uuid);
+                cacheUrlsOrdered.set(i, networkEndpoint +rootPath + pngPath + uuid);
             }
         }
 
@@ -1051,6 +1083,29 @@ public class Img extends Plugin {
         }
     }
 
+    private void invertImage(BufferedImage img) {
+        int width = img.getWidth();
+        int height = img.getHeight();
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int rgba = img.getRGB(x, y);
+                Color col = new Color(rgba, true);
+                int r = 255 - col.getRed();
+                int g = 255 - col.getGreen();
+                int b = 255 - col.getBlue();
+                int a = col.getAlpha();
+                img.setRGB(x, y, new Color(r, g, b, a).getRGB());
+            }
+        }
+    }
+
+    private void gifInvert(GifData gif) {
+        for (BufferedImage frame : gif.getFrames()) {
+            invertImage(frame);
+        }
+    }
+
     private void toType(ParsedPayloadDTO payload, String type) throws IOException {
         List<String> urls = imgService.extractImgUrls(payload, true);
         if (urls == null || urls.isEmpty()) return;
@@ -1062,7 +1117,7 @@ public class Img extends Plugin {
         }
 
         List<String> cacheUrls = new ArrayList<>(uuids.size());
-        for (String uuid : uuids) cacheUrls.add(baseUrl + "/cache/resource/imgs/" + type + "/" + uuid);
+        for (String uuid : uuids) cacheUrls.add(networkEndpoint + rootPath + "/imgs/" + type + "/" + uuid);
         if (!cacheUrls.isEmpty()) sender.sendImage(payload, cacheUrls);
     }
 }
