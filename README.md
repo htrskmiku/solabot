@@ -10,6 +10,10 @@ Spring Boot 3.5
 
 Spring WebFlux 3.5 (WebClient only)
 
+Spring Cloud (in the planning)
+
+Kafka (in the planning)
+
 Docker 27.5
 
 PostgreSQL 16
