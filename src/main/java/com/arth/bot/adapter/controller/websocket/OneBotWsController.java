@@ -5,6 +5,7 @@ import com.arth.bot.adapter.parser.PayloadParser;
 import com.arth.bot.adapter.io.SessionRegistry;
 import com.arth.bot.adapter.util.LogHelper;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
+import com.arth.bot.core.common.exception.BusinessException;
 import com.arth.bot.core.invoker.CommandInvoker;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -109,7 +110,8 @@ public class OneBotWsController extends TextWebSocketHandler {
                 /* 多线程异步解析命令 */
                 executorService.execute(() -> {
                     try {
-                        commandInvoker.invokeByPayload(dto);
+                        commandInvoker.invoke(dto);
+                    } catch (BusinessException ignored) {
                     } catch (Exception e) {
                         log.error("async handle error", e);
                     }

@@ -46,16 +46,16 @@ public class Live extends Plugin {
     private final StreamerAliasService streamerAliasService;
     private final StreamerSubscriptionMapper streamerSubscriptionMapper;
     private final StreamerSubscriptionService subscriptionService;
-    private final TaskScheduler taskScheduler;
     private final SessionRegistry sessionRegistry;
     private final WebClient webClient;
+    private final TaskScheduler taskScheduler;
 
     final Map<String, Long> aliasToStreamId = new HashMap<>();
     final Map<Long, Boolean> isLiving = new HashMap<>();
     final Map<Long, List<UserInfo>> streamIdToSubscription = new HashMap<>();
 
     @Value("${app.parameter.plugin.live.query-time-gap}")
-    private int queryTimeGap;  // min
+    private int queryTimeGap;
 
     @Getter
     public final String helpText = """
@@ -93,7 +93,10 @@ public class Live extends Plugin {
         }
 
         // 启动定时监听任务（通过 TaskScheduler）
-        taskScheduler.schedule(this::checkAllLiveStatus, tc -> Instant.now().plus(Duration.ofMinutes(queryTimeGap)));
+        taskScheduler.scheduleAtFixedRate(
+                this::checkAllLiveStatus,
+                Duration.ofMinutes(queryTimeGap)
+        );
     }
 
     @BotCommand("index")
@@ -376,25 +379,38 @@ public class Live extends Plugin {
                     boolean isNowLiving = checkLiving(streamId);
 
                     if (!wasLiving && isNowLiving) {
-                        List<WebSocketSession> sessions = sessionRegistry.getAll();
                         List<UserInfo> subscriptions = streamIdToSubscription.get(streamId);
-                        for (WebSocketSession session : sessions) {
+                        if (subscriptions != null && !subscriptions.isEmpty()) {
+                            List<WebSocketSession> sessions = sessionRegistry.getAll();
                             for (UserInfo subscription : subscriptions) {
-                                sender.sendText(session, subscription.userId(), subscription.groupId(), "炫狗开播了，兄弟们撤");
+                                for (WebSocketSession session : sessions) {
+                                    sender.sendText(
+                                            session,
+                                            subscription.userId(),
+                                            subscription.groupId(),
+                                            "炫狗开播了，兄弟们撤！"
+                                    );
+                                }
                             }
                         }
                     }
 
                     isLiving.put(streamId, isNowLiving);
+
                 } catch (Exception e) {
-                    log.error("直播间状态检查失败 [{}]: {}", streamId, e.getMessage());
+                    log.error("failed to check live status of stream id {}: {}", streamId, e.getMessage());
                 }
             });
-        } finally {
-            taskScheduler.schedule(
-                    this::checkAllLiveStatus,
-                    Instant.now().plus(Duration.ofMinutes(5))
-            );
+
+        } catch (Exception e) {
+            log.error("get an unexpected exception: {}", e.getMessage(), e);
+        }
+
+        try {
+            Instant nextRun = Instant.now().plus(Duration.ofMinutes(queryTimeGap));
+            taskScheduler.schedule(this::checkAllLiveStatus, nextRun);
+        } catch (Exception e) {
+            log.error("failed to check live status again: {}", e.getMessage(), e);
         }
     }
 

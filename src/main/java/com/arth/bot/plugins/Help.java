@@ -82,10 +82,6 @@ public class Help extends Plugin {
         }
     }
 
-    public void help(ParsedPayloadDTO payload) {
-
-    }
-
     @Override
     public String getHelpText() {
         return "";

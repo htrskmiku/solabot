@@ -23,14 +23,14 @@ app:
     pjsk-resource:
       static:
         master-data:
-          root: "/static/pjsk/master_data"
-          jp: "/static/pjsk/master_data/jp"
+          root: "static/pjsk/master_data"
+          jp: "static/pjsk/master_data/jp"
 
       dynamic:
         mysekai:
-          root: "/dynamic/pjsk_user_data/mysekai/draw"
-          map: "/dynamic/pjsk_user_data/mysekai/draw/map/"
-          overview: "/dynamic/pjsk_user_data/mysekai/draw/overview/"
+          root: "dynamic/pjsk_user_data/mysekai/draw"
+          map: "dynamic/pjsk_user_data/mysekai/draw/map/"
+          overview: "dynamic/pjsk_user_data/mysekai/draw/overview/"
 
   parameter:
     cache:

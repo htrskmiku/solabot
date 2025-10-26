@@ -144,21 +144,20 @@ public final class Mysekai {
      */
     @Deprecated
     private static Path findPjskFileTMP(Pjsk.CoreBeanContext ctx, String pjskId) {
-        String dirPath = System.getProperty("user.dir") + ctx.localMapPath();
-        Path directory = Path.of(dirPath);
-        if (!Files.exists(directory) || !Files.isDirectory(directory)) {
-            return Path.of(dirPath, "default.png");
+        Path dir = ctx.localMapPath();
+        if (!Files.exists(dir) || !Files.isDirectory(dir)) {
+            return dir.resolve("default.png");
         }
         try {
-            return Files.list(directory)
+            return Files.list(dir)
                     .filter(file -> {
                         String fileName = file.getFileName().toString();
                         return fileName.matches("[a-z]{2}_" + pjskId + "\\.png");
                     })
                     .findFirst()
-                    .orElse(Path.of(dirPath, "default.png"));
+                    .orElse(dir.resolve("default.png"));
         } catch (IOException e) {
-            return Path.of(dirPath, "default.png");
+            return dir.resolve("default.png");
         }
     }
 }

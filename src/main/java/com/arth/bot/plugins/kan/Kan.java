@@ -9,7 +9,9 @@ import com.arth.bot.plugins.Plugin;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-@BotPlugin({"看"})
+import java.util.List;
+
+@BotPlugin(value = {"看"}, glued = true)
 @RequiredArgsConstructor
 public class Kan extends Plugin {
 
@@ -34,8 +36,13 @@ public class Kan extends Plugin {
                         图源 API 来自 luna茶！""";
 
     @BotCommand("index")
+    public void index(ParsedPayloadDTO payload, List<String> args) {
+        sender.sendImage(payload, galleryCacheService.getRandomPicUrl(args.get(0)));
+    }
+
+    @Override
     public void index(ParsedPayloadDTO payload) {
-        sender.replyText(payload, "看命令不需要接空格哦，正确使用方法比如 “/看saki”");
+
     }
 
     @BotCommand("help")
