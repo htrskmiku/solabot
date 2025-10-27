@@ -36,7 +36,7 @@ app:
     cache:
       tmp-img:
         ttl: 3  # min
-        max-size: 26214400  # bit num
+        max-size: 26214400  # bit num, 25MB
       gallery-metadata-ttl: 6  # hour
 
     plugin:

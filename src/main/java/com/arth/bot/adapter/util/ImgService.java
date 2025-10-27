@@ -18,6 +18,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+// 新增的 imports（用于流式下载）
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import reactor.core.publisher.Flux;
+
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.metadata.IIOMetadata;
@@ -25,11 +30,13 @@ import javax.imageio.metadata.IIOMetadataNode;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.channels.Channels;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -54,17 +61,11 @@ public class ImgService {
      * @return
      */
     public BufferedImage getBufferedImg(String url) {
-        byte[] bytes = webClient.get()
-                .uri(url)
-                .accept(MediaType.IMAGE_JPEG, MediaType.IMAGE_PNG, MediaType.IMAGE_GIF)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, rsp -> rsp.createException().flatMap(Mono::error))
-                .bodyToMono(byte[].class)
-                .timeout(Duration.ofSeconds(10))
-                .block();  // 让阻塞发生在 MVC 业务线程
+        // 流式 getBytes(String) 实现（因为我真的碰到了缓冲区不足的问题）
+        byte[] bytes = getBytes(url);
         if (bytes == null) return null;
         try (ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
-            return ImageIO.read(in);  // 阻塞操作在业务线程执行，不要卡住 Netty I/O 线程
+            return ImageIO.read(in);  // 阻塞操作在业务线程执行，千万不要卡住 Netty I/O 线程
         } catch (IOException e) {
             return null;
         }
@@ -117,26 +118,46 @@ public class ImgService {
     }
 
     /**
-     * 从 url 下载一张图片，返回二进制数据 byte[]
+     * 从 url 流式分块下载一张图片，返回二进制数据 byte[]
      *
      * @param url
      * @return
      */
     public byte[] getBytes(String url) {
         try {
-            return webClient.get()
+            // 流式 bodyToFlux(DataBuffer) 写入 ByteArrayOutputStream
+            Flux<DataBuffer> flux = webClient.get()
                     .uri(url)
                     .accept(MediaType.APPLICATION_OCTET_STREAM)
                     .retrieve()
-                    .bodyToMono(byte[].class)
-                    .block(Duration.ofSeconds(10));
+                    .onStatus(HttpStatusCode::isError, rsp -> rsp.createException().flatMap(Mono::error))
+                    .bodyToFlux(DataBuffer.class);
+
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                 WritableByteChannel channel = Channels.newChannel(baos)) {
+
+                // 将每个 DataBuffer 写入 channel 并释放 DataBuffer
+                flux.doOnNext(dataBuffer -> {
+                            try {
+                                channel.write(dataBuffer.asByteBuffer());
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            } finally {
+                                DataBufferUtils.release(dataBuffer);
+                            }
+                        })
+                        .blockLast(Duration.ofSeconds(60));  // 超时时间
+
+                return baos.toByteArray();
+            }
         } catch (Exception e) {
+            log.error("Failed to get response from " + url, e);
             return null;
         }
     }
 
     /**
-     * 从输入流读取全部二进制数据，返回 byte[]
+     * 从输入流流式分块读取全部二进制数据，返回 byte[]
      * 注意，本方法不会主动关闭传入的 InputStream
      *
      * @param inputStream
@@ -144,13 +165,15 @@ public class ImgService {
      */
     public byte[] getBytes(InputStream inputStream) {
         if (inputStream == null) return null;
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (BufferedInputStream bis = new BufferedInputStream(inputStream);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream(8192)) {
             byte[] buf = new byte[8192];
             int n;
-            while ((n = inputStream.read(buf)) != -1) baos.write(buf, 0, n);
+            while ((n = bis.read(buf)) != -1) {
+                baos.write(buf, 0, n);
+            }
             return baos.toByteArray();
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("HTTP error: ", e);
             return null;
         }
@@ -460,7 +483,7 @@ public class ImgService {
         String replyMsgId = payload.getReplyToMessageId();
         if (replyMsgId == null || replyMsgId.isBlank()) {
             if (printPrompt) sender.replyText(payload, "请引用一条图片消息哦");
-            throw new InvalidCommandArgsException("", "未提取到引用消息");
+            throw new InvalidCommandArgsException("未提取到引用消息", "未提取到引用消息");
         }
 
         ReplayedMessagePayloadDTO r;
@@ -593,14 +616,11 @@ public class ImgService {
      */
     public InputStream openUrlInputStream(String url) throws IOException {
         try {
-            Resource resource = webClient.get()
-                    .uri(url)
-                    .accept(MediaType.APPLICATION_OCTET_STREAM)
-                    .retrieve()
-                    .bodyToMono(Resource.class)
-                    .block(Duration.ofSeconds(10));
-
-            return resource.getInputStream();
+            // 使用流式下载到临时文件并返回 FileInputStream 以避免内存聚合
+            Path tmp = Files.createTempFile("imgsvc-", ".tmp");
+            // 下载并覆盖写入临时文件
+            downloadToFile(url, tmp);
+            return new FileInputStream(tmp.toFile());
         } catch (Exception e) {
             throw new IOException("Failed to fetch URL: " + url, e);
         }
@@ -663,6 +683,47 @@ public class ImgService {
     public String detectImageType(InputStream in) throws IOException {
         byte[] data = getBytes(in);
         return detectImageType(data);
+    }
+
+    /**
+     * 从 URL 流式下载并写入指定文件（自动创建且覆盖 targetPath）。
+     * 适用于视频/大文件等不希望全部加载到内存的场景。
+     *
+     * @param url
+     * @param targetPath
+     * @return
+     */
+    public Path downloadToFile(String url, Path targetPath) {
+        Flux<DataBuffer> flux = webClient.get()
+                .uri(url)
+                .accept(MediaType.APPLICATION_OCTET_STREAM)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, rsp -> rsp.createException().flatMap(Mono::error))
+                .bodyToFlux(DataBuffer.class);
+
+        try {
+            if (targetPath.getParent() != null) Files.createDirectories(targetPath.getParent());
+            // StandardOpenOption.CREATE, TRUNCATE_EXISTING, WRITE
+            try (FileOutputStream fos = new FileOutputStream(targetPath.toFile());
+                 WritableByteChannel channel = Channels.newChannel(fos)) {
+
+                flux.doOnNext(dataBuffer -> {
+                            try {
+                                channel.write(dataBuffer.asByteBuffer());
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            } finally {
+                                DataBufferUtils.release(dataBuffer);
+                            }
+                        })
+                        .blockLast(Duration.ofMinutes(10));  // 考虑大文件，超时设置 10min
+
+                return targetPath;
+            }
+        } catch (Exception e) {
+            log.error("Failed to downloadToFile: " + url, e);
+            return null;
+        }
     }
 
     @Data

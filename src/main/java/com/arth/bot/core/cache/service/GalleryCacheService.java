@@ -15,6 +15,8 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.*;
@@ -36,7 +38,7 @@ public class GalleryCacheService {
 
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final WebClient webClient;
 
     @Value("${app.parameter.cache.gallery-metadata-ttl}")
     private long ttl;  // HOURS
@@ -94,16 +96,20 @@ public class GalleryCacheService {
         String url = picApiPath + path;
 
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + authToken);
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-            ResponseEntity<byte[]> resp = restTemplate.exchange(url, HttpMethod.GET, entity, byte[].class);
+            byte[] resp = webClient.get()
+                    .uri(url)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + authToken)
+                    .retrieve()
+                    .onStatus(status -> !status.is2xxSuccessful(),
+                            r -> Mono.error(new ExternalServiceErrorException("failed to fetch image from remote API: " + url)))
+                    .bodyToMono(byte[].class)
+                    .block();
 
-            if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
+            if (resp == null) {
                 throw new ExternalServiceErrorException("failed to fetch image from remote API: " + url);
             }
-            return resp.getBody();
-        } catch (RestClientException e) {
+            return resp;
+        } catch (Exception e) {
             log.error("[core.cache] error fetching image {}: {}", url, e.getMessage());
             throw new ExternalServiceErrorException("error fetching image from remote API: " + url);
         }
@@ -134,14 +140,16 @@ public class GalleryCacheService {
 
         Map<String, Map<String, Object>> galleries;
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + authToken);
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-            ResponseEntity<Map<String, Map<String, Object>>> response = restTemplate.exchange(
-                    metadataApi, HttpMethod.GET, entity,
-                    new ParameterizedTypeReference<>() {
-                    });
-            galleries = response.getBody();
+            galleries = webClient.get()
+                    .uri(metadataApi)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + authToken)
+                    .retrieve()
+                    .onStatus(status -> !status.is2xxSuccessful(),
+                            r -> Mono.error(new ExternalServiceErrorException("failed to fetch gallery metadata from remote API: " + metadataApi)))
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Map<String, Object>>>() {
+                    })
+                    .block();
+
             if (galleries == null || galleries.isEmpty()) {
                 log.warn("[core.cache] remote gallery API returned empty body");
                 return;

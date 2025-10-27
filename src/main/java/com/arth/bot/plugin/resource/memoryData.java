@@ -78,6 +78,7 @@ public final class memoryData {
         alias.put("toya", "toya");
         alias.put("青柳冬弥", "toya");
         alias.put("冬弥", "toya");
+        alias.put("董秘", "toya");
 
         alias.put("tks", "tks");
         alias.put("天马司", "tks");

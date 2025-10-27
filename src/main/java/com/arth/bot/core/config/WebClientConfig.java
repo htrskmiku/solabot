@@ -18,8 +18,8 @@ public class WebClientConfig {
     @Bean
     public ConnectionProvider connectionProvider() {
         return ConnectionProvider.builder("global")
-                .maxConnections(200)          // 连接池大小
-                .pendingAcquireMaxCount(500)  // 等待连接队列大小
+                .maxConnections(200)           // 连接池大小
+                .pendingAcquireMaxCount(500)   // 等待连接队列大小
                 .maxIdleTime(Duration.ofSeconds(30))
                 .maxLifeTime(Duration.ofMinutes(5))
                 .build();
@@ -47,7 +47,8 @@ public class WebClientConfig {
         return WebClient.builder()
                 .clientConnector(connector)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .codecs(c -> c.defaultCodecs().maxInMemorySize(4 * 1024 * 1024));
+                // 这里硬编码缓冲区大小 16MB，但实际上我们是通过流式传输实现的，不存在缓冲区大小不足的问题，因此没有提供配置项
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(16 * 1024 * 1024));
     }
 
     @Bean
@@ -55,4 +56,3 @@ public class WebClientConfig {
         return builder.build();
     }
 }
-

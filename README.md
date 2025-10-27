@@ -10,9 +10,11 @@ Spring Boot 3.5
 
 Spring WebFlux 3.5 (WebClient only)
 
-Spring Cloud (in the planning)
+Spring Cloud (in the planning)（计划首先用于组卡器微服务）
 
-Kafka (in the planning)
+Kafka (in the planning)（计划首先用于组卡器微服务）
+
+k8s (in the planning)（计划首先用于组卡器微服务）
 
 Docker 27.5
 
