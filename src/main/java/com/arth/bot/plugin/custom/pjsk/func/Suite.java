@@ -1,7 +1,12 @@
-package com.arth.bot.plugins.pjsk.func;
+package com.arth.bot.plugin.custom.pjsk.func;
 
+import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.ExternalServiceErrorException;
-import com.arth.bot.plugins.pjsk.Pjsk;
+import com.arth.bot.core.common.exception.ResourceNotFoundException;
+import com.arth.bot.core.database.domain.PjskBinding;
+import com.arth.bot.core.database.mapper.PjskBindingMapper;
+import com.arth.bot.plugin.custom.pjsk.Pjsk;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -17,16 +22,35 @@ public final class Suite {
     private Suite() {
     }
 
+    public static void box(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
+        String[] regionAndId = getRegionAndId(ctx, payload);
+        JsonNode suiteData = requestSuite(ctx, regionAndId[0], regionAndId[1]);
+
+    }
+
     // ***** ============= advanced helper ============= *****
     // ***** ============= advanced helper ============= *****
     // ***** ============= advanced helper ============= *****
 
+    private static String[] getRegionAndId(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
+        String[] res = new String[2];
+        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(PjskBinding::getUserId, payload.getUserId());
+        PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryWrapper);
+        if (binding == null) throw new ResourceNotFoundException("user's pjsk binding data not found");
+        res[0] = binding.getServerRegion();
+        res[1] = binding.getPjskId();
+        return res;
+    }
 
 
+    // ***** ============= request helper ============= *****
+    // ***** ============= request helper ============= *****
+    // ***** ============= request helper ============= *****
 
-    // ***** ============= basic request function ============= *****
-    // ***** ============= basic request function ============= *****
-    // ***** ============= basic request function ============= *****
+    private static byte[] requestThumbnail(Pjsk.CoreBeanContext ctx, int cardId) {
+        return null;
+    }
 
     private static JsonNode requestSuite(Pjsk.CoreBeanContext ctx, String region, String id) {
         String url = ctx.suiteApi().replace("{region}", region).replace("{id}", id);

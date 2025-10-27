@@ -1,17 +1,18 @@
-package com.arth.bot.plugins;
+package com.arth.bot.plugin.resource;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-public final class StaticDataConfig {
+public final class memoryData {
 
-    public static Map<String, String> alias = new HashMap<>();
+    public static Map<String, String> alias = new ConcurrentHashMap<>();
 
     static {
         alias.put("ick", "ick");
         alias.put("星乃一歌", "ick");
         alias.put("一歌", "ick");
         alias.put("小一", "ick");
+        alias.put("一", "ick");
         alias.put("炒面面包", "ick");
 
         alias.put("saki", "saki");
@@ -29,6 +30,8 @@ public final class StaticDataConfig {
         alias.put("shiho", "shiho");
         alias.put("日夜森志步", "shiho");
         alias.put("志步", "shiho");
+        alias.put("吸", "shiho");
+        alias.put("吸酱", "shiho");
 
         alias.put("mnr", "mnr");
         alias.put("花里实乃理", "mnr");
@@ -155,8 +158,25 @@ public final class StaticDataConfig {
         alias.put("冰", "kaito");
         alias.put("海人", "kaito");
 
+        alias.put("teto", "teto");
+        alias.put("重音", "teto");
+        alias.put("钻头", "teto");
+        alias.put("铁托", "teto");
+
         alias.put("猪", "猪");
         alias.put("将军", "猪");
         alias.put("太阳", "猪");
+
+        alias.put("夜鹭", "夜鹭");
+        alias.put("夜", "夜鹭");
+
+        alias.put("西巴", "西八");
+        alias.put("西八", "西八");
+        alias.put("兔子", "西八");
+        alias.put("兔兔", "西八");
+        alias.put("兔", "西八");
+
+        alias.put("kiwi", "kiwi");
+        alias.put("几维", "kiwi");
     }
 }

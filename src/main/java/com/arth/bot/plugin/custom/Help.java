@@ -1,4 +1,4 @@
-package com.arth.bot.plugins;
+package com.arth.bot.plugin.custom;
 
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.ForwardChainBuilder;
@@ -33,7 +33,9 @@ public class Help extends Plugin {
                         pjsk 啤酒烧烤模块目前支持以下命令：
                           - 绑定 <pjsk id>: 绑定 pjsk 账号
                           - 绑定 / 查询绑定: 查看 pjsk 账号的绑定
-                          - msm: 查看所绑定的 mysekai 数据"""));
+                          - msm: 查看所绑定的 mysekai 数据
+                          - box: 查询 box，尚未实装
+                          - luna茶的组卡器，尚未实装"""));
 
         if (payload.getGroupId() == null || payload.getGroupId().equals(619096416L) || payload.getGroupId().equals(1036993047L) || payload.getGroupId().equals(570656202L)) {
             building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("""

@@ -4,7 +4,7 @@ import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.BusinessException;
 import com.arth.bot.core.common.exception.CommandNotFoundException;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
-import com.arth.bot.plugins.DefaultStrategy;
+import com.arth.bot.plugin.system.DefaultStrategy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -99,7 +99,7 @@ public class CommandInvoker {
             }
 
             boolean hasArgs = s.args() != null && !s.args().isEmpty();
-            String cacheKey = s.name() + (hasArgs ? "||args" : "||noarg");
+            String cacheKey = s.name() + (hasArgs ? ":args" : ":noarg");
             CommandHandler preferred = holder.getPreferred(cacheKey);
             if (preferred == null) {
                 preferred = chooseBest(candidates, payload, s.args());

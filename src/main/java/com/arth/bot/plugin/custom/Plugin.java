@@ -1,4 +1,4 @@
-package com.arth.bot.plugins;
+package com.arth.bot.plugin.custom;
 
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.invoker.PluginRegistry;

@@ -1,4 +1,4 @@
-package com.arth.bot.plugins.pjsk;
+package com.arth.bot.plugin.custom.pjsk;
 
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.ActionChainBuilder;
@@ -6,8 +6,9 @@ import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import com.arth.bot.core.database.mapper.PjskBindingMapper;
-import com.arth.bot.plugins.Plugin;
-import com.arth.bot.plugins.pjsk.func.Mysekai;
+import com.arth.bot.plugin.custom.Plugin;
+import com.arth.bot.plugin.custom.pjsk.func.Mysekai;
+import com.arth.bot.plugin.custom.pjsk.func.Suite;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,11 @@ public class Pjsk extends Plugin {
     }
 
     // ***** ============= Suite ============= *****
+
+    @BotCommand({"box", "卡牌一览"})
+    public void box(ParsedPayloadDTO payload) {
+        Suite.box(getCtx(), payload);
+    }
 
 
 

@@ -1,4 +1,4 @@
-package com.arth.bot.plugins;
+package com.arth.bot.plugin.custom;
 
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.util.ImgService;

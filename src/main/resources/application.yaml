@@ -3,7 +3,7 @@ server:
   port: 8848
 
 app:
-  client-access-network-endpoint: "http://192.168.1.3:8848"
+  client-access-network-endpoint: "http://localhost:8848"
 
   api-path:
     cache:
@@ -36,7 +36,7 @@ app:
     cache:
       tmp-img:
         ttl: 3  # min
-        max-size: 26214400
+        max-size: 26214400  # bit num
       gallery-metadata-ttl: 6  # hour
 
     plugin:
@@ -45,7 +45,7 @@ app:
           hrk:
             suite-api: "https://suite-api.haruki.seiunx.com/public/{region}/suite/{id}"
             mysekai-api: "https://suite-api.haruki.seiunx.com/public/{region}/mysekai/{id}"
-            jp-master-data-api: "https://raw.githubusercontent.com/Team-Haruki/haruki-sekai-master/blob/main/versions/current_version.json"
+            jp-master-data-api: "https://raw.githubusercontent.com/Team-Haruki/haruki-sekai-master/main/versions/current_version.json"
           uni:
             thumbnail-api: "https://assets.unipjsk.com/startapp/thumbnail/chara/{assetbundle_name}_{status}.png"
           sekai-best:
@@ -53,7 +53,7 @@ app:
 
       kan:
         metadata-api: "https://bot.teaphenby.com/api/galleries"
-        pic-api-path: "https://bot.teaphenby.com/api/gallery/"
+        pic-api-path: "https://bot.teaphenby.com/api/gallery/"  # https://bot.teaphenby.com/api/gallery/{path}
         auth-token: "arthur-stat"
 
       live:

@@ -1,10 +1,10 @@
-package com.arth.bot.plugins.pjsk.func;
+package com.arth.bot.plugin.custom.pjsk.func;
 
 import com.arth.bot.adapter.sender.action.ActionChainBuilder;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.database.domain.PjskBinding;
-import com.arth.bot.plugins.pjsk.Pjsk;
+import com.arth.bot.plugin.custom.pjsk.Pjsk;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 import java.io.IOException;

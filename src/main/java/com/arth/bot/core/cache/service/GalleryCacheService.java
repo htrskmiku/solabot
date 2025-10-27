@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * GalleryCacheService
- *
+ * <p>
  * 说明：
  * - 该服务不在本地持久化画廊图片，依赖远端 API 提供图片及元数据
  * - 采用 Redis 缓存元数据：hash (gallery:{role}:pics) + zset (gallery:{role}:pids)
@@ -42,6 +42,7 @@ public class GalleryCacheService {
     private long ttl;  // HOURS
     private static final String GALLERY_GLOBAL_MARKER = "gallery:cache"; // 全量更新标志（带 TTL）
     private static final String GALLERY_LOCK_PREFIX = "gallery:lock:";   // per-role lock 前缀
+    private static final String PID_ROLE_MAP_KEY = "gallery:pid2role";   // pid → role 映射表
 
     @Value("${app.parameter.plugin.kan.metadata-api}")
     private String metadataApi;
@@ -56,17 +57,23 @@ public class GalleryCacheService {
     // 锁持续时间
     private static final long LOCK_BASE_SECONDS = 30L;
 
+    // 最大等待时间：当检测到 role 正在更新时，读取端等待这个时间（ms）
+    private static final long READ_WAIT_MAX_MILLIS = 5000L; // 5s
+
+    // 等待轮询间隔（ms）
+    private static final long READ_WAIT_POLL_MILLIS = 100L;
+
     public byte[] getPic(String role, String pid) {
         tryUpdateGalleryCache();
         String hashKey = "gallery:" + role + ":pics";
         Object picJson = redisTemplate.opsForHash().get(hashKey, pid);
 
         if (picJson == null) {
-            try {
-                // 如果没拿到缓存，短暂重试以等待可能正在更新的线程完成更新
-                Thread.sleep(120L);
-            } catch (InterruptedException ignored) {}
+            // 如果没拿到缓存，短暂重试以等待可能正在更新的线程完成更新
+            // 如果检测到 role 正在被更新，则等待直到锁释放并轮询数据（最大等待 READ_WAIT_MAX_MILLIS）
+            waitForRoleDataIfUpdating(role, () -> redisTemplate.opsForHash().get(hashKey, pid));
             picJson = redisTemplate.opsForHash().get(hashKey, pid);
+
             if (picJson == null) {
                 throw new ResourceNotFoundException("pic metadata not found for role=" + role + ", pid=" + pid);
             }
@@ -81,7 +88,7 @@ public class GalleryCacheService {
 
         Object pathObj = picMeta.get("path");
         if (pathObj == null) {
-            throw new InternalServerErrorException("Missing 'path' in metadata for pid=" + pid);
+            throw new InternalServerErrorException("missing 'path' in metadata for pid=" + pid);
         }
         String path = pathObj.toString().trim();
         String url = picApiPath + path;
@@ -104,7 +111,7 @@ public class GalleryCacheService {
 
     /**
      * 尝试更新整个画廊缓存（注意：远端 API 返回的是全量数据，但我们在本地以 role 为单位分别缓存/过期/加锁）
-     *
+     * <p>
      * 锁策略：
      * - 先检查全局标志 GALLERY_GLOBAL_MARKER 的 TTL（如果存在且 >阈值，则不刷新）
      * - 拉取远端全量数据后，按 role 分别更新各自的 hash/zset，并在每个 role 上设置独立随机 TTL
@@ -125,7 +132,6 @@ public class GalleryCacheService {
 
         log.info("[core.cache] find gallery cache expired, try to update");
 
-        // 拉取远端数据（实际上 luna茶 提供的 api 是全量的，我们并不能只更新指定 role）
         Map<String, Map<String, Object>> galleries;
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -133,7 +139,8 @@ public class GalleryCacheService {
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<Map<String, Map<String, Object>>> response = restTemplate.exchange(
                     metadataApi, HttpMethod.GET, entity,
-                    new ParameterizedTypeReference<>() {});
+                    new ParameterizedTypeReference<>() {
+                    });
             galleries = response.getBody();
             if (galleries == null || galleries.isEmpty()) {
                 log.warn("[core.cache] remote gallery API returned empty body");
@@ -144,7 +151,12 @@ public class GalleryCacheService {
             return;
         }
 
-        // 对每个 role 分别尝试更新（并发下每个 role 用独立锁）
+        try {
+            redisTemplate.delete(PID_ROLE_MAP_KEY);
+        } catch (Exception e) {
+            log.warn("[core.cache] failed to clear pid → role map before refresh: {}", e.getMessage());
+        }
+
         for (Map.Entry<String, Map<String, Object>> roleEntry : galleries.entrySet()) {
             String role = roleEntry.getKey();
             if (role == null) continue;
@@ -158,14 +170,11 @@ public class GalleryCacheService {
 
             Boolean acquired = false;
             try {
-                // 尝试获取锁（如果没拿到，跳过当前 role 的更新；但不影响其它 role）
                 acquired = redisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, Duration.ofSeconds(lockTtlSeconds));
                 if (!Boolean.TRUE.equals(acquired)) {
-                    // 如果锁未获取，跳过更新（可能其他实例正在更新该 role）
                     continue;
                 }
 
-                // 清除旧数据 hash 和 zset
                 String hashKey = "gallery:" + role + ":pics";
                 String sortedSetKey = "gallery:" + role + ":pids";
                 try {
@@ -175,10 +184,8 @@ public class GalleryCacheService {
                     redisTemplate.delete(oldKeys);
                 } catch (Exception e) {
                     log.warn("[core.cache] failed to delete old keys for role {}: {}", role, e.getMessage());
-                    // 继续执行写入，避免中断
                 }
 
-                // 写入新数据：使用 pipeline 批量写入以提升性能
                 final String finalHashKey = hashKey;
                 final String finalSortedSetKey = sortedSetKey;
 
@@ -190,29 +197,27 @@ public class GalleryCacheService {
                         String pid = pidObj.toString();
                         try {
                             String picJson = objectMapper.writeValueAsString(pic);
-                            // HSET hashKey pid picJson
                             connection.hSet(serializer.serialize(finalHashKey), serializer.serialize(pid),
                                     serializer.serialize(picJson));
+                            connection.hSet(serializer.serialize(PID_ROLE_MAP_KEY),
+                                    serializer.serialize(pid),
+                                    serializer.serialize(role));
                         } catch (JsonProcessingException e) {
-                            // 序列化失败时跳过该项
                             log.warn("[core.cache] serialize pic error for role={}, pid={}, cause={}", role, pid, e.getMessage());
                         }
 
-                        // ZADD sortedSetKey score pid
                         try {
                             double score = Double.parseDouble(pid);
                             connection.zAdd(serializer.serialize(finalSortedSetKey),
                                     score,
                                     serializer.serialize(pid));
                         } catch (NumberFormatException nfe) {
-                            // 若 pid 不是数字，使用 0 作为 score，仍然存入（应该不会出现这个情况）
                             connection.zAdd(serializer.serialize(finalSortedSetKey), 0.0, serializer.serialize(pid));
                         }
                     }
                     return null;
                 });
 
-                // 为两个 key 设置随机化 TTL，防止所有 role 同步过期
                 long extraSeconds = ThreadLocalRandom.current().nextLong(300, 1800); // 5~30 min
                 long ttlSeconds = TimeUnit.HOURS.toSeconds(ttl) + extraSeconds;
                 try {
@@ -223,10 +228,8 @@ public class GalleryCacheService {
                 }
 
             } finally {
-                // 释放锁（比较 token 后删除，防止误删其他锁）
                 if (Boolean.TRUE.equals(acquired)) {
                     try {
-                        // 使用 RedisCallback 做一次原子比较并删除（GET + DEL）
                         redisTemplate.execute((RedisCallback<Object>) connection -> {
                             byte[] key = redisTemplate.getStringSerializer().serialize(lockKey);
                             byte[] val = connection.get(key);
@@ -245,13 +248,12 @@ public class GalleryCacheService {
             }
         }
 
-        // 全部角色更新完毕后，设置全局标志键并加 TTL，作为快速检查的依据
         try {
             long globalExtra = ThreadLocalRandom.current().nextLong(60, 600); // 1~10 min
             long globalTtlSeconds = TimeUnit.HOURS.toSeconds(ttl) + globalExtra;
-            // 设置为简单的字符串并设置 TTL；该键仅用于快速判定是否需要再次刷新
             redisTemplate.opsForValue().set(GALLERY_GLOBAL_MARKER, String.valueOf(System.currentTimeMillis()));
             redisTemplate.expire(GALLERY_GLOBAL_MARKER, globalTtlSeconds, TimeUnit.SECONDS);
+            redisTemplate.expire(PID_ROLE_MAP_KEY, globalTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.warn("[core.cache] failed to set global gallery marker TTL: {}", e.getMessage());
         }
@@ -262,7 +264,11 @@ public class GalleryCacheService {
     /**
      * 将指定 pid 的元数据 URL 返回（辅助方法内部使用）
      */
-    public String getPicUrlByPid(String role, String pid) {
+    public String getPicUrlByPid(String pid) {
+        String role = (String) redisTemplate.opsForHash().get(PID_ROLE_MAP_KEY, pid);
+        if (role == null) {
+            throw new ResourceNotFoundException("role not found for pid: " + pid);
+        }
         Map<String, Object> metadata = getPicMetadataByPid(role, pid);
         Object path = metadata.get("path");
         if (path == null) {
@@ -285,12 +291,11 @@ public class GalleryCacheService {
         String hashKey = "gallery:" + role + ":pics";
         Object picJson = redisTemplate.opsForHash().get(hashKey, pid);
         if (picJson == null) {
-            // 再短暂等待并重试一次，防止刚好被其他线程刷新中
-            try {
-                Thread.sleep(120L);
-            } catch (InterruptedException ignored) {}
+            // 等待正在更新的 role（若存在），直到数据可用或超时
+            waitForRoleDataIfUpdating(role, () -> redisTemplate.opsForHash().get(hashKey, pid));
             picJson = redisTemplate.opsForHash().get(hashKey, pid);
-            if (picJson == null) throw new ResourceNotFoundException("gallery pics not found for role=" + role + ", pid=" + pid);
+            if (picJson == null) throw new ResourceNotFoundException(
+                    "gallery pics not found for role=" + role + ", pid=" + pid);
         }
 
         try {
@@ -310,10 +315,17 @@ public class GalleryCacheService {
         String sortedSetKey = "gallery:" + role + ":pids";
         Long size = redisTemplate.opsForZSet().size(sortedSetKey);
         if (size == null || size == 0) {
-            throw new ResourceNotFoundException("Gallery not found for role: " + role);
+            // 若 size==0，可能正处于更新中，等待锁释放并重试
+            waitForRoleDataIfUpdating(role, () -> {
+                Long s = redisTemplate.opsForZSet().size(sortedSetKey);
+                return s == null ? null : String.valueOf(s);
+            });
+            size = redisTemplate.opsForZSet().size(sortedSetKey);
+            if (size == null || size == 0) {
+                throw new ResourceNotFoundException("Gallery not found for role: " + role);
+            }
         }
 
-        // 优先尝试 zRandMember（Redis 6.2+）通过 low-level connection
         try {
             String maybe = redisTemplate.execute((RedisCallback<String>) connection -> {
                 byte[] keyBytes = redisTemplate.getStringSerializer().serialize(sortedSetKey);
@@ -327,9 +339,9 @@ public class GalleryCacheService {
                 }
             });
             if (maybe != null) return maybe;
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
-        // 回退：按索引随机取
         long idx = ThreadLocalRandom.current().nextLong(size);
         Set<String> result = redisTemplate.opsForZSet().range(sortedSetKey, idx, idx);
         if (result == null || result.isEmpty()) throw new ResourceNotFoundException("no pid found for role: " + role);
@@ -340,7 +352,15 @@ public class GalleryCacheService {
         tryUpdateGalleryCache();
         String sortedSetKey = "gallery:" + role + ":pids";
         Set<String> pids = redisTemplate.opsForZSet().range(sortedSetKey, 0, -1);
-        if (pids == null || pids.isEmpty()) throw new ResourceNotFoundException("gallery role not found");
+        if (pids == null || pids.isEmpty()) {
+            // 可能正在更新，等待并重试
+            waitForRoleDataIfUpdating(role, () -> {
+                Set<String> s = redisTemplate.opsForZSet().range(sortedSetKey, 0, -1);
+                return s == null ? null : String.join(",", s);
+            });
+            pids = redisTemplate.opsForZSet().range(sortedSetKey, 0, -1);
+            if (pids == null || pids.isEmpty()) throw new ResourceNotFoundException("gallery role not found");
+        }
 
         List<Long> list = new ArrayList<>(pids.size());
         for (String pidStr : pids) {
@@ -375,5 +395,81 @@ public class GalleryCacheService {
         log.info("[core.cache] force refreshing gallery cache...");
         forceClearCache();
         tryUpdateGalleryCache();
+    }
+
+    /**
+     * 如果检测到 role 正在更新（通过存在 per-role lock），则等待直到锁释放或者提供的 supplier
+     * 返回非空值（表示数据已就绪），最多等待 READ_WAIT_MAX_MILLIS。
+     * <p>
+     * supplier 用来在轮询中尝试读取目标数据（返回 null 表示未就绪）。
+     */
+    private void waitForRoleDataIfUpdating(String role, DataSupplier supplier) {
+        String lockKey = GALLERY_LOCK_PREFIX + role;
+        try {
+            // 如果没有锁存在，直接返回（避免不必要等待）
+            Long lockTtl = redisTemplate.getExpire(lockKey);
+            if (lockTtl == null || lockTtl < 0) {
+                // 没有正在更新
+                return;
+            }
+
+            long waited = 0L;
+            while (waited < READ_WAIT_MAX_MILLIS) {
+                // 如果数据就绪（supplier 返回非 null/非空字符串/非空集合），立即返回
+                Object s = null;
+                try {
+                    s = supplier.get();
+                } catch (Exception ignored) {
+                }
+                if (isNonEmptyResult(s)) {
+                    return;
+                }
+
+                // 检查锁是否还存在；若锁已被释放，尝试再次读取并返回（下次循环会验证 supplier）
+                Long ttl = redisTemplate.getExpire(lockKey);
+                if (ttl == null || ttl < 0) {
+                    // 锁已释放，下一次 supplier.get() 如果拿到数据就返回；但这里先短暂等待一次，让写入线程有机会完成写操作
+                    try {
+                        Thread.sleep(READ_WAIT_POLL_MILLIS);
+                    } catch (InterruptedException ignored) {
+                    }
+                    Object s2 = null;
+                    try {
+                        s2 = supplier.get();
+                    } catch (Exception ignored) {
+                    }
+                    if (isNonEmptyResult(s2)) return;
+                    // 否则继续循环直到超时
+                } else {
+                    // 锁仍存在，短暂等待一段时间再轮询
+                    try {
+                        Thread.sleep(READ_WAIT_POLL_MILLIS);
+                    } catch (InterruptedException ignored) {
+                    }
+                }
+                waited += READ_WAIT_POLL_MILLIS;
+            }
+        } catch (Exception e) {
+            log.warn("[core.cache] waitForRoleDataIfUpdating encountered exception for role {}: {}", role, e.getMessage());
+        }
+    }
+
+    private boolean isNonEmptyResult(Object s) {
+        if (s == null) return false;
+        if (s instanceof String) {
+            return !((String) s).isEmpty();
+        }
+        if (s instanceof Collection) {
+            return !((Collection<?>) s).isEmpty();
+        }
+        if (s instanceof Map) {
+            return !((Map<?, ?>) s).isEmpty();
+        }
+        return true;
+    }
+
+    @FunctionalInterface
+    private interface DataSupplier {
+        Object get();
     }
 }

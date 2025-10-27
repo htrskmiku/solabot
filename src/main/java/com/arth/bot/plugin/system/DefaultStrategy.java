@@ -1,4 +1,4 @@
-package com.arth.bot.plugins;
+package com.arth.bot.plugin.system;
 
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;

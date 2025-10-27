@@ -1,4 +1,4 @@
-package com.arth.bot.plugins;
+package com.arth.bot.plugin.custom;
 
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.io.SessionRegistry;
@@ -31,9 +31,9 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @BotPlugin({"live"})
@@ -50,9 +50,9 @@ public class Live extends Plugin {
     private final WebClient webClient;
     private final TaskScheduler taskScheduler;
 
-    final Map<String, Long> aliasToStreamId = new HashMap<>();
-    final Map<Long, Boolean> isLiving = new HashMap<>();
-    final Map<Long, List<UserInfo>> streamIdToSubscription = new HashMap<>();
+    final Map<String, Long> aliasToStreamId = new ConcurrentHashMap<>();
+    final Map<Long, Boolean> isLiving = new ConcurrentHashMap<>();
+    final Map<Long, List<UserInfo>> streamIdToSubscription = new ConcurrentHashMap<>();
 
     @Value("${app.parameter.plugin.live.query-time-gap}")
     private int queryTimeGap;

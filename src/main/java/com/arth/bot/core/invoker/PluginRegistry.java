@@ -6,7 +6,7 @@ import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
-import com.arth.bot.plugins.Plugin;
+import com.arth.bot.plugin.custom.Plugin;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +20,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 扫描插件包 plugin 下带有 @BotPlugin 注解的 public 类及其带有 @BotCommand 注解的 public 方法，
@@ -33,7 +34,7 @@ public class PluginRegistry {
     /**
      * 插件根包路径
      */
-    private static final String PLUGIN_BASE_PACKAGE = "com.arth.bot.plugins";
+    private static final String PLUGIN_BASE_PACKAGE = "com.arth.bot.plugin.custom";
 
     @Resource
     private ApplicationContext applicationContext;
@@ -47,12 +48,12 @@ public class PluginRegistry {
     /**
      * 模块别名（小写） -> 插件持有者
      */
-    private final Map<String, PluginHolder> pluginRegistryMap = new HashMap<>();
+    private final Map<String, PluginHolder> pluginRegistryMap = new ConcurrentHashMap<>();
 
     /**
      * 模块简单类名 -> 帮助文本
      */
-    private final Map<String, String> helpTextMap = new HashMap<>();
+    private final Map<String, String> helpTextMap = new ConcurrentHashMap<>();
 
     @PostConstruct
     void init() {
