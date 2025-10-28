@@ -1,7 +1,7 @@
 package com.arth.bot.plugin.custom;
 
 
-import com.arth.bot.adapter.fetcher.ReplyFetcher;
+import com.arth.bot.adapter.fetcher.websocket.ReplyFetcher;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.ForwardChainBuilder;
 import com.arth.bot.core.authorization.annotation.DirectAuthInterceptor;

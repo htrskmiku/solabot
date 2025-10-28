@@ -3,7 +3,7 @@ package com.arth.bot.plugin.resource;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class memoryData {
+public final class MemoryData {
 
     public static Map<String, String> alias = new ConcurrentHashMap<>();
 
@@ -179,5 +179,11 @@ public final class memoryData {
 
         alias.put("kiwi", "kiwi");
         alias.put("几维", "kiwi");
+
+        alias.put("鸟图", "鸟图");
+        alias.put("鸟", "鸟图");
+
+        alias.put("企鹅", "企鹅");
+        alias.put("咕咕嘎嘎", "企鹅");
     }
 }

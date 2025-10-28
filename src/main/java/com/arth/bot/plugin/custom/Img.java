@@ -1,8 +1,8 @@
 package com.arth.bot.plugin.custom;
 
 import com.arth.bot.adapter.sender.Sender;
-import com.arth.bot.adapter.util.ImgService;
-import com.arth.bot.adapter.util.ImgService.GifData;
+import com.arth.bot.adapter.fetcher.http.ImgService;
+import com.arth.bot.adapter.fetcher.http.ImgService.GifData;
 import com.arth.bot.core.cache.service.ImageCacheService;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.InternalServerErrorException;

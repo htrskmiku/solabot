@@ -57,17 +57,17 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.glassfish.tyrus.bundles</groupId>
-            <artifactId>tyrus-standalone-client</artifactId>
-            <version>2.2.0</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.glassfish.tyrus.bundles</groupId>-->
+<!--            <artifactId>tyrus-standalone-client</artifactId>-->
+<!--            <version>2.2.0</version>-->
+<!--        </dependency>-->
 
-        <dependency>
-            <groupId>com.lmax</groupId>
-            <artifactId>disruptor</artifactId>
-            <version>3.4.4</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.lmax</groupId>-->
+<!--            <artifactId>disruptor</artifactId>-->
+<!--            <version>3.4.4</version>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -95,6 +95,12 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
             <version>11.10.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-webp</artifactId>
+            <version>3.12.0</version>
         </dependency>
     </dependencies>
 

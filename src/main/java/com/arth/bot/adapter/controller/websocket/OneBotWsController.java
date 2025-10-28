@@ -1,6 +1,6 @@
 package com.arth.bot.adapter.controller.websocket;
 
-import com.arth.bot.adapter.fetcher.EchoWaiter;
+import com.arth.bot.adapter.fetcher.websocket.EchoWaiter;
 import com.arth.bot.adapter.parser.PayloadParser;
 import com.arth.bot.adapter.io.SessionRegistry;
 import com.arth.bot.adapter.util.LogHelper;

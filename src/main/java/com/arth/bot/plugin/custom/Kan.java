@@ -5,7 +5,7 @@ import com.arth.bot.core.cache.service.GalleryCacheService;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
-import com.arth.bot.plugin.resource.memoryData;
+import com.arth.bot.plugin.resource.MemoryData;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -23,11 +23,8 @@ public class Kan extends Plugin {
                         看看你的模块现支持看：
                           - 所有烤 oc，例如 saki、mnr
                           - 所有 v，例如 miku、kaito，包括 teto
-                          - 看猪
-                          - 看鸟
-                          - 看夜鹭
-                          - 看西巴
-                          - 看kiwi
+                          - 看猪，鸟，夜鹭，西巴，kiwi，企鹅
+
                         这些是紧凑命令，无需空格，使用方法示例是：/看miku
                         也可以按 pid 查看。例如：/看912
                         
@@ -49,7 +46,7 @@ public class Kan extends Plugin {
             }
 
             // 否则解释为别名
-            String alias = memoryData.alias.get(arg);
+            String alias = MemoryData.alias.get(arg);
             if (alias != null) {
                 sender.sendImage(payload, galleryCacheService.getRandomPicUrl(alias));
                 continue;

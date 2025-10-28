@@ -1,6 +1,6 @@
-package com.arth.bot.adapter.util;
+package com.arth.bot.adapter.fetcher.http;
 
-import com.arth.bot.adapter.fetcher.ReplyFetcher;
+import com.arth.bot.adapter.fetcher.websocket.ReplyFetcher;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
@@ -11,7 +11,6 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -36,7 +35,6 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;

@@ -1,6 +1,6 @@
 package com.arth.bot.adapter.sender.impl;
 
-import com.arth.bot.adapter.fetcher.EchoWaiter;
+import com.arth.bot.adapter.fetcher.websocket.EchoWaiter;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.SimpleActionBuilder;
 import com.arth.bot.adapter.io.SessionRegistry;

@@ -1,4 +1,4 @@
-package com.arth.bot.adapter.fetcher;
+package com.arth.bot.adapter.fetcher.websocket;
 
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
 

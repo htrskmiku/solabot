@@ -1,6 +1,6 @@
-package com.arth.bot.adapter.fetcher.impl;
+package com.arth.bot.adapter.fetcher.websocket.impl;
 
-import com.arth.bot.adapter.fetcher.ReplyFetcher;
+import com.arth.bot.adapter.fetcher.websocket.ReplyFetcher;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.util.CQHelper;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
