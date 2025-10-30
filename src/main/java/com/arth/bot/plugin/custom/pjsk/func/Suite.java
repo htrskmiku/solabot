@@ -2,46 +2,105 @@ package com.arth.bot.plugin.custom.pjsk.func;
 
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.ExternalServiceErrorException;
+import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.common.exception.ResourceNotFoundException;
 import com.arth.bot.core.database.domain.PjskBinding;
-import com.arth.bot.core.database.mapper.PjskBindingMapper;
 import com.arth.bot.plugin.custom.pjsk.Pjsk;
+import com.arth.bot.plugin.custom.pjsk.utils.ImageRenderer;
+import com.arth.bot.plugin.custom.pjsk.utils.pair.PjskCardInfo;
+import com.arth.bot.plugin.custom.pjsk.utils.pair.RegionIdPair;
+import com.arth.bot.plugin.custom.pjsk.objects.PjskCard;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public final class Suite {
 
-    private Suite() {
-    }
+    private Suite(){}
+
 
     public static void box(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
-        String[] regionAndId = getRegionAndId(ctx, payload);
-        JsonNode suiteData = requestSuite(ctx, regionAndId[0], regionAndId[1]);
-
+        try {
+            RegionIdPair pair = getRegionAndId(ctx, payload);
+            JsonNode suiteData;
+            if (ctx.devel_mode()){
+                suiteData = getDefaultSuite(ctx);
+            }else {
+                suiteData = requestSuite(ctx, pair.left(), pair.right());
+            }
+            JsonNode userCardsNode = suiteData.get("userCards");
+            ArrayList<PjskCard> pjskCards = new ArrayList<>();
+            double counts = userCardsNode.size();
+            double got = 0;
+            if (userCardsNode.isArray()) {
+                for (JsonNode userCardNode : userCardsNode) {
+                    PjskCardInfo info = LocalResourceData.
+                            getCachedCardInfo(ctx,userCardNode.get("cardId").asInt());
+                    PjskCard card = new PjskCard(userCardNode, info);
+                    card.setThumbnails(new ImageRenderer.Card(ctx,card).draw());
+                    pjskCards.add(card);
+                    got++;
+                    log.info("Pjsk Box Picture getting process: {}% done.",got/counts*100);
+                }
+            }
+            BufferedImage boxImage = new ImageRenderer.Box(ctx,pjskCards).draw();
+            String boxImgUuid = ctx.imageCacheService().cacheImage(boxImage);
+            String boxImgUrl = ctx.networkEndpoint() +"/cache/resource/imgs/png/" + boxImgUuid;
+            if (boxImgUuid == null) {throw new InternalServerErrorException();}
+            ctx.sender().sendImage(payload,boxImgUrl);
+            //TODO:获取thumbnails,考虑是否缓存单个卡面，渲染图片 注意：卡面分为Original和SpecialTraining
+        }catch (NullPointerException e){
+            throw new InternalServerErrorException("Error in getting user card id");
+        }catch (IOException e){
+            throw new ResourceNotFoundException("Error in getting asset bundle: cards.json not found");
+        }catch (ResourceNotFoundException ignored){
+            //???
+        }
     }
 
     // ***** ============= advanced helper ============= *****
     // ***** ============= advanced helper ============= *****
     // ***** ============= advanced helper ============= *****
 
-    private static String[] getRegionAndId(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
-        String[] res = new String[2];
+
+    private static RegionIdPair getRegionAndId(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
+        RegionIdPair pair = new RegionIdPair();
         LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(PjskBinding::getUserId, payload.getUserId());
         PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryWrapper);
         if (binding == null) throw new ResourceNotFoundException("user's pjsk binding data not found");
-        res[0] = binding.getServerRegion();
-        res[1] = binding.getPjskId();
-        return res;
+        pair.setLeft(binding.getServerRegion());
+        pair.setRight(binding.getPjskId());
+        return pair;
     }
+
+    // ***** ======== FOR OFFLINE MODE ONLY ============ *****
+    // ***** ======== FOR OFFLINE MODE ONLY ============ *****
+
+    //offline_mode=true时调用
+    private static JsonNode getDefaultSuite(Pjsk.CoreBeanContext ctx) {
+        Path path = ctx.masterDataPath().resolve("master").resolve("default_suite.json");
+        try {
+            return ctx.objectMapper().readTree(path.toFile());
+        }catch (IOException e) {
+            throw new ResourceNotFoundException("default_suite.json not found");
+        }
+    }
+
+    // ***** ======== FOR OFFLINE MODE ONLY ============ *****
+    // ***** ======== FOR OFFLINE MODE ONLY ============ *****
 
 
     // ***** ============= request helper ============= *****
@@ -49,6 +108,7 @@ public final class Suite {
     // ***** ============= request helper ============= *****
 
     private static byte[] requestThumbnail(Pjsk.CoreBeanContext ctx, int cardId) {
+        String url = ctx.thumbnailApi().replace("{{cardId}}", String.valueOf(cardId));
         return null;
     }
 

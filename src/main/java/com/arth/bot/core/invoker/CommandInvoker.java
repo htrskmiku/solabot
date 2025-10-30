@@ -74,6 +74,7 @@ public class CommandInvoker {
             return runGrouped(payload, holder, groupSteps(stepsTokens, holder));
 
         } catch (BusinessException e) {
+            log.error(e.getMessage(), e);
             throw e;
         } catch (Throwable e) {
             log.error("[core.invoker] unexpected error while invoking", e);

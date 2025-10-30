@@ -94,35 +94,35 @@ create index if not exists idx_membership_group on t_membership (group_id);
 create index if not exists idx_membership_user on t_membership (user_id);
 
 -- 订阅作用域枚举
-do
-$$
-    begin
-        if not exists (select 1 from pg_type where typname = 'subscription_scope') then
-            create type subscription_scope as enum ('user','group');
-        end if;
-    end
-$$;
-
--- 基本订阅/功能开关
-create table if not exists t_subscription
-(
-    id            bigserial primary key,
-    scope         subscription_scope not null,
-    user_id       bigint references t_user (id),
-    group_id      bigint references t_group (id),
-    service_key   varchar(64)        not null,
-    params        jsonb              not null default '{}'::jsonb,
-    schedule_cron varchar(64),
-    enabled       boolean            not null default true,
-    created_at    timestamptz                 default now(),
-    updated_at    timestamptz                 default now(),
-    unique (scope, user_id, group_id, service_key),
-    check (
-        (scope = 'user' and user_id is not null and group_id is null)
-            or
-        (scope = 'group' and group_id is not null and user_id is null)
-        )
-);
-create index if not exists idx_sub_user on t_subscription (user_id) where user_id is not null;
-create index if not exists idx_sub_group on t_subscription (group_id) where group_id is not null;
-create index if not exists idx_sub_service on t_subscription (service_key);
+-- do
+-- $$
+--     begin
+--         if not exists (select 1 from pg_pype where typname = 'subscription_scope') then
+--             create type subscription_scope as enum ('user','group');
+--         end if;
+--     end
+-- $$;
+--
+-- -- 基本订阅/功能开关
+-- create table if not exists t_subscription
+-- (
+--     id            bigserial primary key,
+--     scope         subscription_scope not null,
+--     user_id       bigint references t_user (id),
+--     group_id      bigint references t_group (id),
+--     service_key   varchar(64)        not null,
+--     params        jsonb              not null default '{}'::jsonb,
+--     schedule_cron varchar(64),
+--     enabled       boolean            not null default true,
+--     created_at    timestamptz                 default now(),
+--     updated_at    timestamptz                 default now(),
+--     unique (scope, user_id, group_id, service_key),
+--     check (
+--         (scope = 'user' and user_id is not null and group_id is null)
+--             or
+--         (scope = 'group' and group_id is not null and user_id is null)
+--         )
+-- );
+-- create index if not exists idx_sub_user on t_subscription (user_id) where user_id is not null;
+-- create index if not exists idx_sub_group on t_subscription (group_id) where group_id is not null;
+-- create index if not exists idx_sub_service on t_subscription (service_key);

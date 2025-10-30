@@ -18,11 +18,14 @@ app:
         mysekai:
           map: "/{region}/mysekai/{id}/map"
           overview: "/{region}/mysekai/{id}/overview"
+        devel_mode: true #开发模式，当devel_mode=true时app仅从本机读取示例 suite，可在suite api服务器不可用/开发时启用
+        cache_cards_thumbnails: true #是否缓存已渲染的卡面缩略图，小内存机器慎用
 
   local-path:
     pjsk-resource:
       static:
         master-data:
+          box: "static/pjsk/master_data/box"
           root: "static/pjsk/master_data"
           jp: "static/pjsk/master_data/jp"
 
@@ -83,7 +86,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    clean-disabled: false  # 生产环境请删掉该字段，该字段若设置为 false，在每次启动应用时都会删库并重建以便于开发和测试
+    clean-disabled: true  # 生产环境请删掉该字段，该字段若设置为 false，在每次启动应用时都会删库并重建以便于开发和测试
 
   data:
     redis:

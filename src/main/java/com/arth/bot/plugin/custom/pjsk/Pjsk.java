@@ -1,7 +1,9 @@
 package com.arth.bot.plugin.custom.pjsk;
 
+import com.arth.bot.adapter.fetcher.http.ImgService;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.ActionChainBuilder;
+import com.arth.bot.core.cache.service.ImageCacheService;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
@@ -16,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.awt.*;
 import java.nio.file.Path;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -72,12 +75,13 @@ public class Pjsk extends Plugin {
     // ***** ============= ctx ============= *****
 
     private volatile CoreBeanContext ctx;
-
     private final Sender sender;
     private final WebClient webClient;
     private final ActionChainBuilder actionChainBuilder;
     private final PjskBindingMapper pjskBindingMapper;
     private final ObjectMapper objectMapper;
+    private final ImgService imgService;
+    private final ImageCacheService imageCacheService;
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter
             .ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneId.of("Asia/Shanghai"));
@@ -103,6 +107,11 @@ public class Pjsk extends Plugin {
     @Value("${app.parameter.plugin.pjsk.external-api.uni.thumbnail-api}")
     private String thumbnailApi;
 
+    @Value("${app.api-path.plugin.pjsk.devel_mode}")
+    private boolean devel_mode;
+    @Value("${app.api-path.plugin.pjsk.cache_cards_thumbnails}")
+    private boolean cache_cards_thumbnails;
+
     /**
      * 懒汉式线程安全获取 ctx
      *
@@ -118,6 +127,8 @@ public class Pjsk extends Plugin {
                             actionChainBuilder,
                             pjskBindingMapper,
                             objectMapper,
+                            imgService,
+                            imageCacheService,
                             dateTimeFormatter,
                             networkEndpoint,
                             rootApiPath,
@@ -128,7 +139,9 @@ public class Pjsk extends Plugin {
                             Path.of(masterDataPath).toAbsolutePath().normalize(),
                             suiteApi,
                             mysekaiApi,
-                            thumbnailApi
+                            thumbnailApi,
+                            devel_mode,
+                            cache_cards_thumbnails
                     );
                 }
             }
@@ -142,6 +155,8 @@ public class Pjsk extends Plugin {
         ActionChainBuilder actionChainBuilder();
         PjskBindingMapper pjskBindingMapper();
         ObjectMapper objectMapper();
+        ImgService imgService();
+        ImageCacheService imageCacheService();
         DateTimeFormatter dateTimeFormatter();
         String networkEndpoint();
         String rootApiPath();
@@ -153,6 +168,7 @@ public class Pjsk extends Plugin {
         String suiteApi();
         String mysekaiApi();
         String thumbnailApi();
+        boolean devel_mode();
     }
 
     public record CoreBeanContext(
@@ -161,6 +177,8 @@ public class Pjsk extends Plugin {
             ActionChainBuilder actionChainBuilder,
             PjskBindingMapper pjskBindingMapper,
             ObjectMapper objectMapper,
+            ImgService imgService,
+            ImageCacheService imageCacheService,
             DateTimeFormatter dateTimeFormatter,
             String networkEndpoint,
             String rootApiPath,
@@ -171,6 +189,8 @@ public class Pjsk extends Plugin {
             Path masterDataPath,
             String suiteApi,
             String mysekaiApi,
-            String thumbnailApi) implements BeanContext {
+            String thumbnailApi,
+            boolean devel_mode,
+            boolean cache_cards_thumbnails) implements BeanContext {
     }
 }
