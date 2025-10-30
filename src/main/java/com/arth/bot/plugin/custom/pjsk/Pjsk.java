@@ -2,6 +2,7 @@ package com.arth.bot.plugin.custom.pjsk;
 
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.ActionChainBuilder;
+import com.arth.bot.core.cache.service.ImageCacheService;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
@@ -76,6 +77,7 @@ public class Pjsk extends Plugin {
     private final Sender sender;
     private final WebClient webClient;
     private final ActionChainBuilder actionChainBuilder;
+    private final ImageCacheService imageCacheService;
     private final PjskBindingMapper pjskBindingMapper;
     private final ObjectMapper objectMapper;
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter
@@ -116,6 +118,7 @@ public class Pjsk extends Plugin {
                             sender,
                             webClient,
                             actionChainBuilder,
+                            imageCacheService,
                             pjskBindingMapper,
                             objectMapper,
                             dateTimeFormatter,
@@ -140,6 +143,7 @@ public class Pjsk extends Plugin {
         Sender sender();
         WebClient webClient();
         ActionChainBuilder actionChainBuilder();
+        ImageCacheService imageCacheService();
         PjskBindingMapper pjskBindingMapper();
         ObjectMapper objectMapper();
         DateTimeFormatter dateTimeFormatter();
@@ -159,6 +163,7 @@ public class Pjsk extends Plugin {
             Sender sender,
             WebClient webClient,
             ActionChainBuilder actionChainBuilder,
+            ImageCacheService imageCacheService,
             PjskBindingMapper pjskBindingMapper,
             ObjectMapper objectMapper,
             DateTimeFormatter dateTimeFormatter,

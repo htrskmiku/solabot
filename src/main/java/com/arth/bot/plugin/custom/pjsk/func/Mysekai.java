@@ -91,7 +91,7 @@ public final class Mysekai {
             newBinding.setPjskId(pjskId);
             newBinding.setUserId(userId);
             newBinding.setGroupId(groupId);
-            newBinding.setServerRegion("xx");
+            newBinding.setServerRegion("cn");
             newBinding.setCreatedAt(new Date());
             newBinding.setUpdatedAt(new Date());
             ctx.pjskBindingMapper().insert(newBinding);
@@ -99,7 +99,7 @@ public final class Mysekai {
         } else {
             // 存在记录，更新
             binding.setPjskId(pjskId);
-            binding.setServerRegion("xx");
+            binding.setServerRegion("cn");
             binding.setUpdatedAt(new Date());
             ctx.pjskBindingMapper().updateById(binding);
             ctx.sender().sendText(payload, "pjsk binding just updated");

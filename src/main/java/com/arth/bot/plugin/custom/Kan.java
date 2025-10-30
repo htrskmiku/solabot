@@ -27,6 +27,7 @@ public class Kan extends Plugin {
 
                         这些是紧凑命令，无需空格，使用方法示例是：/看miku
                         也可以按 pid 查看。例如：/看912
+                        "/看看" 则会在全角色内随机
                         
                         非紧凑命令（需要空格）：
                           - fresh: 强制刷新缓存
@@ -38,6 +39,12 @@ public class Kan extends Plugin {
         for (String arg : args) {
             // 空字符
             if (arg == null || arg.isEmpty()) continue;
+
+            // 全局随机
+            if (arg.equals("看") || arg.equals("看你的")) {
+                sender.sendImage(payload, galleryCacheService.getRandomPicUrlGlobal());
+                continue;
+            }
 
             // 如果输入是纯数字，视为 pid
             if (arg.matches("\\d+")) {

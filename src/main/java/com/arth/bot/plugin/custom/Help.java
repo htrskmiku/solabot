@@ -65,7 +65,7 @@ public class Help extends Plugin {
 
         building.addCustomNode(payload.getSelfId(), "bot", n -> n.text(pluginRegistry.getPluginHelpText("Img")))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text(pluginRegistry.getPluginHelpText("看")))
-                .addCustomNode(payload.getSelfId(), "bot", n -> n.text(pluginRegistry.getPluginHelpText("live")))
+                .addCustomNode(payload.getSelfId(), "bot", n -> n.text(pluginRegistry.getPluginHelpText("Live")))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text(pluginRegistry.getPluginHelpText("Test")));;
 
         String json = (payload.getGroupId() != null) ? building.toGroupJson(payload.getGroupId()) : building.toPrivateJson(payload.getUserId());

@@ -92,7 +92,6 @@ public class Live extends Plugin {
             streamIdToSubscription.computeIfAbsent(streamId, key -> new ArrayList<>()).add(new UserInfo(userId, groupId));
         }
 
-        // 启动定时监听任务（通过 TaskScheduler）
         taskScheduler.scheduleAtFixedRate(
                 this::checkAllLiveStatus,
                 Duration.ofMinutes(queryTimeGap)
@@ -253,7 +252,7 @@ public class Live extends Plugin {
 
     @BotCommand({"alias"})
     public void alias(ParsedPayloadDTO payload, List<String> args) {
-        for (int i = 0; i < args.size() / 2; i += 2) {
+        for (int i = 0; i < args.size(); i += 2) {
             Long streamId;
             String nickname = args.get(i + 1);
             try {
@@ -404,13 +403,6 @@ public class Live extends Plugin {
 
         } catch (Exception e) {
             log.error("get an unexpected exception: {}", e.getMessage(), e);
-        }
-
-        try {
-            Instant nextRun = Instant.now().plus(Duration.ofMinutes(queryTimeGap));
-            taskScheduler.schedule(this::checkAllLiveStatus, nextRun);
-        } catch (Exception e) {
-            log.error("failed to check live status again: {}", e.getMessage(), e);
         }
     }
 
