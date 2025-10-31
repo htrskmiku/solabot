@@ -1,5 +1,6 @@
 package com.arth.bot.plugin.custom.pjsk;
 
+import com.arth.bot.adapter.controller.ApiPaths;
 import com.arth.bot.adapter.fetcher.http.ImgService;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.ActionChainBuilder;
@@ -76,24 +77,16 @@ public class Pjsk extends Plugin {
     private volatile CoreBeanContext ctx;
     private final Sender sender;
     private final WebClient webClient;
+    private final ApiPaths apiPaths;
     private final ActionChainBuilder actionChainBuilder;
     private final ImageCacheService imageCacheService;
     private final PjskBindingMapper pjskBindingMapper;
     private final ObjectMapper objectMapper;
     private final ImgService imgService;
-    private final ImageCacheService imageCacheService;
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter
             .ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneId.of("Asia/Shanghai"));
 
-    @Value("${app.client-access-network-endpoint}")
-    String networkEndpoint;
-    @Value("${app.api-path.plugin.pjsk.root}")
-    String rootApiPath;
-    @Value("${app.api-path.plugin.pjsk.mysekai.map}")
-    String mapApiPath;
-    @Value("${app.api-path.plugin.pjsk.mysekai.overview}")
-    String overviewApiPath;
     @Value("${app.local-path.pjsk-resource.dynamic.mysekai.map}")
     String localMapPath;
     @Value("${app.local-path.pjsk-resource.dynamic.mysekai.overview}")
@@ -126,17 +119,13 @@ public class Pjsk extends Plugin {
                     ctx = new CoreBeanContext(
                             sender,
                             webClient,
+                            apiPaths,
                             actionChainBuilder,
                             imageCacheService,
                             pjskBindingMapper,
                             objectMapper,
                             imgService,
-                            imageCacheService,
                             dateTimeFormatter,
-                            networkEndpoint,
-                            rootApiPath,
-                            mapApiPath,
-                            overviewApiPath,
                             Path.of(localMapPath).toAbsolutePath().normalize(),
                             Path.of(localOverviewPath).toAbsolutePath().normalize(),
                             Path.of(masterDataPath).toAbsolutePath().normalize(),
@@ -156,17 +145,13 @@ public class Pjsk extends Plugin {
     public interface BeanContext {
         Sender sender();
         WebClient webClient();
+        ApiPaths apiPaths();
         ActionChainBuilder actionChainBuilder();
         ImageCacheService imageCacheService();
         PjskBindingMapper pjskBindingMapper();
         ObjectMapper objectMapper();
         ImgService imgService();
-        ImageCacheService imageCacheService();
         DateTimeFormatter dateTimeFormatter();
-        String networkEndpoint();
-        String rootApiPath();
-        String mapApiPath();
-        String overviewApiPath();
         Path localMapPath();
         Path localOverviewPath();
         Path masterDataPath();
@@ -181,17 +166,13 @@ public class Pjsk extends Plugin {
     public record CoreBeanContext(
             Sender sender,
             WebClient webClient,
+            ApiPaths apiPaths,
             ActionChainBuilder actionChainBuilder,
             ImageCacheService imageCacheService,
             PjskBindingMapper pjskBindingMapper,
             ObjectMapper objectMapper,
             ImgService imgService,
-            ImageCacheService imageCacheService,
             DateTimeFormatter dateTimeFormatter,
-            String networkEndpoint,
-            String rootApiPath,
-            String mapApiPath,
-            String overviewApiPath,
             Path localMapPath,
             Path localOverviewPath,
             Path masterDataPath,

@@ -14,8 +14,6 @@ Spring Cloud (in the planning)（计划首先用于组卡器微服务）
 
 Kafka (in the planning)（计划首先用于组卡器微服务）
 
-k8s (in the planning)（计划首先用于组卡器微服务）
-
 Docker 27.5
 
 PostgreSQL 16
@@ -48,3 +46,7 @@ docker stop $(docker ps -q)
 mvn clean package
 mvn spring-boot:run  # java -jar target/bot-0.0.1-SNAPSHOT.jar
 ```
+
+# thanks!
+
+Thanks to junior schoolmate [htrskmiku](https://github.com/htrskmiku) for the contribution.

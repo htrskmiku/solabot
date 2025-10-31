@@ -68,7 +68,7 @@ public final class Suite {
             log.info("Pjsk Box Picture rendering process: {} pictures done,Used {}ms.",counts,stopMs-startMs);
             BufferedImage boxImage = new ImageRenderer.Box(ctx,pjskCards).draw();
             String boxImgUuid = ctx.imageCacheService().cacheImage(boxImage);
-            String boxImgUrl = ctx.networkEndpoint() +"/cache/resource/imgs/png/" + boxImgUuid;
+            String boxImgUrl = ctx.apiPaths().buildPngUrl(boxImgUuid);
             if (boxImgUuid == null) {throw new InternalServerErrorException();}
 
             ActionChainBuilder chainBuilder = ctx.actionChainBuilder().create()
@@ -86,6 +86,7 @@ public final class Suite {
         }catch (NullPointerException e){
             throw new InternalServerErrorException("Error in getting user card id");
         }catch (IOException e){
+            e.printStackTrace();
             throw new ResourceNotFoundException("Error in getting asset bundle: cards.json not found");
         }catch (ResourceNotFoundException ignored){
             //???
@@ -100,7 +101,8 @@ public final class Suite {
     private static RegionIdPair getRegionAndId(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
         RegionIdPair pair = new RegionIdPair();
         LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PjskBinding::getUserId, payload.getUserId());
+        queryWrapper.eq(PjskBinding::getUserId, payload.getUserId())
+                .eq(PjskBinding::getGroupId, payload.getGroupId());
         PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryWrapper);
         if (binding == null) throw new ResourceNotFoundException("user's pjsk binding data not found");
         pair.setLeft(binding.getServerRegion());
@@ -194,6 +196,9 @@ public final class Suite {
         try {
             String responseBody = webClient.get()
                     .uri(url)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                    .header("Accept", "application/json, text/plain, */*")
+                    .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, response ->
@@ -202,7 +207,7 @@ public final class Suite {
                                             "Request failed with status code: " + response.statusCode() + "\n" + body)))
                     )
                     .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(10))
+                    .timeout(Duration.ofSeconds(30))
                     .block();
             if (responseBody == null) {
                 throw new IOException("Empty response body for URL: " + url);

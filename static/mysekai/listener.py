@@ -51,7 +51,7 @@ def create_app(queue=None):
         const upload = () => {{
             $httpClient.post({{
                 url: "https://{LOCAL_IP}:{OUT_PORT}/upload",
-                headers: {{ 
+                headers: {{
                     "X-Original-Url": $request.url,
                     "X-Request-Path": $request.path
                 }},

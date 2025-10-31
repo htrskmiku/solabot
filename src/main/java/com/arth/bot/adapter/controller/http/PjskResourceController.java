@@ -1,5 +1,6 @@
 package com.arth.bot.adapter.controller.http;
 
+import com.arth.bot.adapter.controller.ApiPaths;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -16,7 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 @RestController
-@RequestMapping("${app.api-path.plugin.pjsk.root}")
 public class PjskResourceController {
 
     private final Path BASE_DIR;
@@ -26,12 +26,12 @@ public class PjskResourceController {
         BASE_DIR = Path.of(rootPath).toAbsolutePath().normalize();
     }
 
-    @GetMapping("${app.api-path.plugin.pjsk.mysekai.map}")
+    @GetMapping(ApiPaths.PJSK_MYSEKAI_MAP)
     public ResponseEntity<Resource> getMysekaiMap(@PathVariable String region, @PathVariable String id) throws IOException {
         return buildMysekaiResourceUrlSafely("map", region, id);
     }
 
-    @GetMapping("${app.api-path.plugin.pjsk.mysekai.overview}")
+    @GetMapping(ApiPaths.PJSK_MYSEKAI_OVERVIEW)
     public ResponseEntity<Resource> getMysekaiOverview(@PathVariable String region, @PathVariable String id) throws IOException {
         return buildMysekaiResourceUrlSafely("overview", region, id);
     }

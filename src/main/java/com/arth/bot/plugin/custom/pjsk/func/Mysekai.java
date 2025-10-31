@@ -51,14 +51,8 @@ public final class Mysekai {
         }
 
         region = file.getFileName().toString().substring(0, 2);
-        String overviewImgUrl = ctx.networkEndpoint() +
-                ctx.rootApiPath() +
-                ctx.overviewApiPath().replace("{region}", region).replace("{id}", pjskId);
-
-        String mapImgUrl = ctx.networkEndpoint() +
-                ctx.rootApiPath() +
-                ctx.mapApiPath().replace("{region}", region).replace("{id}", pjskId);
-
+        String overviewImgUrl = ctx.apiPaths().buildMysekaiOverviewUrl(region, pjskId);
+        String mapImgUrl = ctx.apiPaths().buildMysekaiMapUrl(region, pjskId);
         ActionChainBuilder builder = ctx.actionChainBuilder().create().setReplay(payload.getMessageId())
                 .text("MySekai 数据更新于" + updatedTime)
                 .image(overviewImgUrl)

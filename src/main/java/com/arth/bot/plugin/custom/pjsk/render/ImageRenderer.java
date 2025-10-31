@@ -7,6 +7,7 @@ import com.arth.bot.plugin.custom.pjsk.objects.enums.CardAttributes;
 import com.arth.bot.plugin.custom.pjsk.objects.enums.CardRarities;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.ResourceUtils;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -18,6 +19,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
@@ -148,7 +150,6 @@ public class ImageRenderer {
 
     //卡片渲染，大小固定为156*156
     public static class Card{
-        private String endpoint;    //常用静态资源在src/main/resources/static/pjsk/box中
         private CardAttributes attributes;
         private CardRarities rarities;
         private BufferedImage thumbnails;
@@ -161,17 +162,16 @@ public class ImageRenderer {
         private boolean shouldDrawBoarder = true;
         private boolean shouldDrawAttribute = true;
         //https://assets.unipjsk.com/startapp/thumbnail/chara/{assetbundle_name}_{status}.png
-        public Card(Pjsk.BeanContext ctx,PjskCard pjskCard){
+        public Card(Pjsk.BeanContext ctx,PjskCard pjskCard) throws IOException {
             this.ctx = ctx;
-            endpoint = ctx.networkEndpoint();
             attributes = pjskCard.getAttributes();
             rarities = pjskCard.getRarities();
             thumbnails = AssetsBundleResources.getOrCacheThumbnailByCard(ctx,pjskCard);
-
-            boarder = ctx.imgService().getBufferedImg(endpoint + "/pjsk/box/boarder/" + pjskCard.getRarities().name().toLowerCase() + ".png");
-            rarityImage = ctx.imgService().getBufferedImg(endpoint + "/pjsk/box/" +
-                    (pjskCard.getRarities().equals(CardRarities.RARITY_BIRTHDAY) ? "rarity_birthday.png" : "star.png"));
-            attributeImage = ctx.imgService().getBufferedImg(endpoint + "/pjsk/box/attribute/" + pjskCard.getAttributes().name().toLowerCase() + ".png");
+            
+            boarder = ImageIO.read(ResourceUtils.getFile("src/main/resources/static/pjsk/box/boarder/" + pjskCard.getRarities().name().toLowerCase() + ".png"));
+            rarityImage = ImageIO.read(ResourceUtils.getFile("src/main/resources/static/pjsk/box/" +
+                    (pjskCard.getRarities().equals(CardRarities.RARITY_BIRTHDAY) ? "rarity_birthday.png" : "star.png")));
+            attributeImage = ImageIO.read(ResourceUtils.getFile("src/main/resources/static/pjsk/box/attribute/" + pjskCard.getAttributes().name().toLowerCase() + ".png"));
         }
         public void noDrawRarity(){shouldDrawRarity = false;}
         public void noDrawBoarder(){shouldDrawBoarder = false;}
@@ -208,16 +208,14 @@ public class ImageRenderer {
 
     //输出渲染box,单个背景最多可放60张卡(5x10)
     public static class Box{
-        private String endpoint;
         private ArrayList<PjskCard> cards;
         private BufferedImage background;
         private BufferedImage output;
         private boolean descend = true;
         private Pjsk.BeanContext ctx;
-        public Box(Pjsk.BeanContext ctx,ArrayList<PjskCard> cards) {
+        public Box(Pjsk.BeanContext ctx,ArrayList<PjskCard> cards) throws IOException {
             this.ctx = ctx;
-            endpoint = ctx.networkEndpoint();
-            this.background = ctx.imgService().getBufferedImg(endpoint + "/pjsk/box/background.png");
+            this.background = ImageIO.read(ResourceUtils.getFile("src/main/resources/static/pjsk/box/background.png"));
             this.output = background;
             this.cards = cards;
         }
