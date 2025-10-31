@@ -39,12 +39,12 @@ public class BusinessExceptionHandlerAspect {
      * @return
      * @throws Throwable
      */
-    @Around("execution(* com.arth.bot.core.invoker.CommandInvoker.invokeByPayload(..)) && args(payload)")
+    @Around("execution(* com.arth.bot.core.invoker.CommandInvoker.invoke(..)) && args(payload)")
     public Object around(ProceedingJoinPoint joinPoint, ParsedPayloadDTO payload) throws Throwable {
         try {
             return joinPoint.proceed();
         } catch (BusinessException e) {
-            log.warn("[core: business exception] " + e.getErrorCode() + ": {}", e.getMessage(), e);
+            log.debug("[core: business exception] " + e.getErrorCode() + ": {}", e.getMessage(), e);
             return null;
         }
     }

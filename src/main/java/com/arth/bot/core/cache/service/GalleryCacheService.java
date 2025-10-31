@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * GalleryCacheService
@@ -63,8 +64,12 @@ public class GalleryCacheService {
     // 等待轮询间隔（ms）
     private static final long READ_WAIT_POLL_MILLIS = 100L;
 
+    // role 权重表（用于支持全局随机）
+    private final AtomicReference<RolesSnapshot> rolesSnapshot = new AtomicReference<>(null);
+
     public byte[] getPic(String role, String pid) {
         tryUpdateGalleryCache();
+
         String hashKey = "gallery:" + role + ":pics";
         Object picJson = redisTemplate.opsForHash().get(hashKey, pid);
 
@@ -163,6 +168,8 @@ public class GalleryCacheService {
             log.warn("[core.cache] failed to clear pid → role map before refresh: {}", e.getMessage());
         }
 
+        Map<String, Integer> roleCounts = new HashMap<>(Math.max(16, galleries.size()));
+
         for (Map.Entry<String, Map<String, Object>> roleEntry : galleries.entrySet()) {
             String role = roleEntry.getKey();
             if (role == null) continue;
@@ -178,6 +185,7 @@ public class GalleryCacheService {
             try {
                 acquired = redisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, Duration.ofSeconds(lockTtlSeconds));
                 if (!Boolean.TRUE.equals(acquired)) {
+                    roleCounts.put(role, pics.size());
                     continue;
                 }
 
@@ -233,6 +241,8 @@ public class GalleryCacheService {
                     log.warn("[core.cache] failed to set TTL for role {} keys: {}", role, e.getMessage());
                 }
 
+                roleCounts.put(role, pics.size());
+
             } finally {
                 if (Boolean.TRUE.equals(acquired)) {
                     try {
@@ -262,6 +272,14 @@ public class GalleryCacheService {
             redisTemplate.expire(PID_ROLE_MAP_KEY, globalTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.warn("[core.cache] failed to set global gallery marker TTL: {}", e.getMessage());
+        }
+
+        try {
+            RolesSnapshot snapshot = RolesSnapshot.buildFromRoleCounts(roleCounts);
+            rolesSnapshot.set(snapshot);
+            log.debug("[core.cache] rolesSnapshot updated: roles={}, totalPics={}", snapshot.roles.size(), snapshot.total);
+        } catch (Exception e) {
+            log.warn("[core.cache] failed to build rolesSnapshot: {}", e.getMessage());
         }
 
         log.info("[core.cache] updated gallery cache successfully");
@@ -294,6 +312,7 @@ public class GalleryCacheService {
 
     public Map<String, Object> getPicMetadataByPid(String role, String pid) {
         tryUpdateGalleryCache();
+
         String hashKey = "gallery:" + role + ":pics";
         Object picJson = redisTemplate.opsForHash().get(hashKey, pid);
         if (picJson == null) {
@@ -318,6 +337,7 @@ public class GalleryCacheService {
 
     public String getRandomPid(String role) {
         tryUpdateGalleryCache();
+
         String sortedSetKey = "gallery:" + role + ":pids";
         Long size = redisTemplate.opsForZSet().size(sortedSetKey);
         if (size == null || size == 0) {
@@ -354,8 +374,33 @@ public class GalleryCacheService {
         return result.iterator().next();
     }
 
+    /**
+     * 从全局（所有角色）范围随机返回一张图片 URL（按权重=每角色图片数）。
+     * <p>
+     * 实现：读取内存 snapshot（rolesSnapshot），按权重随机选择角色，然后调用已有的按角色随机实现。
+     */
+    public String getRandomPicUrlGlobal() {
+        tryUpdateGalleryCache();
+
+        RolesSnapshot snapshot = rolesSnapshot.get();
+        if (snapshot == null || snapshot.total <= 0 || snapshot.roles.isEmpty()) {
+            forceRefreshCache();
+            snapshot = rolesSnapshot.get();
+            if (snapshot == null || snapshot.total <= 0 || snapshot.roles.isEmpty()) {
+                throw new ResourceNotFoundException("global gallery is empty");
+            }
+        }
+
+        int total = snapshot.total;
+        int rnd = ThreadLocalRandom.current().nextInt(total);
+        int idx = snapshot.pickRoleIndex(rnd);
+        String chosenRole = snapshot.roles.get(idx);
+        return getRandomPicUrl(chosenRole);
+    }
+
     public List<Long> getPidList(String role) {
         tryUpdateGalleryCache();
+
         String sortedSetKey = "gallery:" + role + ":pids";
         Set<String> pids = redisTemplate.opsForZSet().range(sortedSetKey, 0, -1);
         if (pids == null || pids.isEmpty()) {
@@ -477,5 +522,46 @@ public class GalleryCacheService {
     @FunctionalInterface
     private interface DataSupplier {
         Object get();
+    }
+
+    /**
+     * 角色权重快照类
+     */
+    private record RolesSnapshot(List<String> roles, int[] prefixSums, int total) {
+
+        static RolesSnapshot buildFromRoleCounts(Map<String, Integer> roleCounts) {
+            if (roleCounts == null || roleCounts.isEmpty()) {
+                return new RolesSnapshot(Collections.emptyList(), new int[0], 0);
+            }
+            List<Map.Entry<String, Integer>> entries = new ArrayList<>(roleCounts.entrySet());
+            entries.sort(Comparator.comparing(Map.Entry::getKey));
+            List<String> roles = new ArrayList<>(entries.size());
+            int[] prefix = new int[entries.size()];
+            int sum = 0;
+            for (int i = 0; i < entries.size(); i++) {
+                Map.Entry<String, Integer> e = entries.get(i);
+                roles.add(e.getKey());
+                int cnt = Math.max(0, e.getValue() == null ? 0 : e.getValue());
+                sum += cnt;
+                prefix[i] = sum;
+            }
+            return new RolesSnapshot(Collections.unmodifiableList(roles), prefix, sum);
+        }
+
+        /**
+         * 根据随机数 x (0 <= x < total) 二分查找角色索引
+         */
+        int pickRoleIndex(int x) {
+            int l = 0, r = prefixSums.length - 1;
+            while (l < r) {
+                int m = (l + r) >>> 1;
+                if (x < prefixSums[m]) {
+                    r = m;
+                } else {
+                    l = m + 1;
+                }
+            }
+            return l;
+        }
     }
 }

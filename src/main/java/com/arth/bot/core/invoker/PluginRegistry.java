@@ -104,9 +104,13 @@ public class PluginRegistry {
                     String help = p.getHelpText();
                     if (help != null) {
                         helpTextMap.put(clazz.getSimpleName(), help);
+                        for (String alias : pluginAnn.value()) {
+                            if (alias != null && !alias.isBlank()) {
+                                helpTextMap.putIfAbsent(alias.trim().toLowerCase(Locale.ROOT), help);
+                            }
+                        }
                     }
                 }
-
                 log.info("[core.invoker] registered plugin: {} -> {}", Arrays.toString(pluginAnn.value()), clazz.getSimpleName());
             }
         } catch (Exception e) {

@@ -28,13 +28,15 @@ public class PjskResourceController {
 
     @GetMapping("${app.api-path.plugin.pjsk.mysekai.map}")
     public ResponseEntity<Resource> getMysekaiMap(@PathVariable String region, @PathVariable String id) throws IOException {
-        return buildPjskResourceUrlSafely("map", region, id);
+        return buildMysekaiResourceUrlSafely("map", region, id);
     }
 
     @GetMapping("${app.api-path.plugin.pjsk.mysekai.overview}")
     public ResponseEntity<Resource> getMysekaiOverview(@PathVariable String region, @PathVariable String id) throws IOException {
-        return buildPjskResourceUrlSafely("overview", region, id);
+        return buildMysekaiResourceUrlSafely("overview", region, id);
     }
+
+//    @GetMapping("")  // 预计是提供模块配置的下载
 
     /**
      * 安全的响应构造方法，避免路径遍历攻击
@@ -45,7 +47,7 @@ public class PjskResourceController {
      * @return
      * @throws IOException
      */
-    private ResponseEntity<Resource> buildPjskResourceUrlSafely(String type, String region, String id) throws IOException {
+    private ResponseEntity<Resource> buildMysekaiResourceUrlSafely(String type, String region, String id) throws IOException {
         // 400: 校验 region 与 id 格式
         if (!region.matches("[a-zA-Z0-9_-]+") || !id.matches("[a-zA-Z0-9_-]+")) {
             return ResponseEntity.badRequest().build();

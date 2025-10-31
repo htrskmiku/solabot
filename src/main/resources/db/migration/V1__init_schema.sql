@@ -46,58 +46,58 @@ create index if not exists idx_subscription_stream on t_streamer_subscription (s
 
 -- //============++++** 基本表 **++++============//
 
--- 基本用户表
-create table if not exists t_user
-(
-    id         bigint      primary key,
-    platform   varchar(16) not null default 'qq',
-    open_id    bigint      not null,
-    nickname   varchar(64),
-    avatar_url text,
-    locale     varchar(16)          default 'zh-CN',
-    timezone   varchar(64)          default 'Asia/Shanghai',
-    status     varchar(16)          default 'active',
-    created_at timestamptz          default now(),
-    updated_at timestamptz          default now(),
-    unique (platform, open_id)
-);
-create index if not exists idx_user_open on t_user (platform, open_id);
-
--- 基本群表
-create table if not exists t_group
-(
-    id            bigint      primary key,
-    platform      varchar(16) not null default 'qq',
-    open_id       bigint      not null,
-    name          varchar(128),
-    owner_open_id bigint,
-    status        varchar(16)          default 'active',
-    created_at    timestamptz          default now(),
-    updated_at    timestamptz          default now(),
-    unique (platform, open_id)
-);
-create index if not exists idx_group_open on t_group (platform, open_id);
-
--- 基本成员关系
-create table if not exists t_membership
-(
-    id           bigserial primary key,
-    user_id      bigint not null references t_user (id) on delete cascade,
-    group_id     bigint not null references t_group (id) on delete cascade,
-    role         varchar(16) default 'member',
-    note_name    varchar(64),
-    joined_at    timestamptz default now(),
-    last_seen_at timestamptz,
-    unique (user_id, group_id)
-);
-create index if not exists idx_membership_group on t_membership (group_id);
-create index if not exists idx_membership_user on t_membership (user_id);
-
--- 订阅作用域枚举
+-- -- 基本用户表
+-- create table if not exists t_user
+-- (
+--     id         bigint      primary key,
+--     platform   varchar(16) not null default 'qq',
+--     open_id    bigint      not null,
+--     nickname   varchar(64),
+--     avatar_url text,
+--     locale     varchar(16)          default 'zh-CN',
+--     timezone   varchar(64)          default 'Asia/Shanghai',
+--     status     varchar(16)          default 'active',
+--     created_at timestamptz          default now(),
+--     updated_at timestamptz          default now(),
+--     unique (platform, open_id)
+-- );
+-- create index if not exists idx_user_open on t_user (platform, open_id);
+--
+-- -- 基本群表
+-- create table if not exists t_group
+-- (
+--     id            bigint      primary key,
+--     platform      varchar(16) not null default 'qq',
+--     open_id       bigint      not null,
+--     name          varchar(128),
+--     owner_open_id bigint,
+--     status        varchar(16)          default 'active',
+--     created_at    timestamptz          default now(),
+--     updated_at    timestamptz          default now(),
+--     unique (platform, open_id)
+-- );
+-- create index if not exists idx_group_open on t_group (platform, open_id);
+--
+-- -- 基本成员关系
+-- create table if not exists t_membership
+-- (
+--     id           bigserial primary key,
+--     user_id      bigint not null references t_user (id) on delete cascade,
+--     group_id     bigint not null references t_group (id) on delete cascade,
+--     role         varchar(16) default 'member',
+--     note_name    varchar(64),
+--     joined_at    timestamptz default now(),
+--     last_seen_at timestamptz,
+--     unique (user_id, group_id)
+-- );
+-- create index if not exists idx_membership_group on t_membership (group_id);
+-- create index if not exists idx_membership_user on t_membership (user_id);
+--
+-- -- 订阅作用域枚举
 -- do
 -- $$
 --     begin
---         if not exists (select 1 from pg_pype where typname = 'subscription_scope') then
+--         if not exists (select 1 from pg_type where typname = 'subscription_scope') then
 --             create type subscription_scope as enum ('user','group');
 --         end if;
 --     end

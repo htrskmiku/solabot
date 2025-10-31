@@ -171,6 +171,7 @@ public final class MemoryData {
         alias.put("猪", "猪");
         alias.put("将军", "猪");
         alias.put("太阳", "猪");
+        alias.put("豚", "猪");
 
         alias.put("夜鹭", "夜鹭");
         alias.put("夜", "夜鹭");
