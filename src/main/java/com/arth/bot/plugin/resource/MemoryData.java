@@ -1,18 +1,14 @@
 package com.arth.bot.plugin.resource;
 
-import com.arth.bot.plugin.custom.pjsk.utils.pair.PjskCardInfo;
+import com.arth.bot.plugin.custom.pjsk.objects.PjskCardInfo;
 
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class MemoryData {
 
-    public static HashMap<Integer,PjskCardInfo> cachedCards = new HashMap<>();
-    public static ArrayList<BufferedImage> normalCardBufferedImage = new ArrayList<>();
-    public static ArrayList<BufferedImage> specialTrainingCardBufferedImage = new ArrayList<>();
+    public static ArrayList<PjskCardInfo> cachedCardsNew;//新的卡缓存方法
     public static Map<String, String> alias = new ConcurrentHashMap<>();
 
     static {

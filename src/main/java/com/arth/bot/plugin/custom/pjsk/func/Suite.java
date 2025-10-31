@@ -1,13 +1,14 @@
 package com.arth.bot.plugin.custom.pjsk.func;
 
+import com.arth.bot.adapter.sender.action.ActionChainBuilder;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.ExternalServiceErrorException;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.common.exception.ResourceNotFoundException;
 import com.arth.bot.core.database.domain.PjskBinding;
 import com.arth.bot.plugin.custom.pjsk.Pjsk;
-import com.arth.bot.plugin.custom.pjsk.utils.ImageRenderer;
-import com.arth.bot.plugin.custom.pjsk.utils.pair.PjskCardInfo;
+import com.arth.bot.plugin.custom.pjsk.render.ImageRenderer;
+import com.arth.bot.plugin.custom.pjsk.objects.PjskCardInfo;
 import com.arth.bot.plugin.custom.pjsk.utils.pair.RegionIdPair;
 import com.arth.bot.plugin.custom.pjsk.objects.PjskCard;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -32,7 +33,17 @@ public final class Suite {
 
 
     public static void box(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
+        long userId = payload.getUserId();
+        Long groupId = payload.getGroupId();
+        PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
+
+        if (binding == null) {
+            ctx.sender().replyText(payload, "数据库中没有查询到你绑定的 pjsk 账号哦");
+            return;
+        }
+
         try {
+            ctx.sender().replyText(payload,"已经收到查Box请求，正在生成图片，生成时间较长，请耐心等待");
             RegionIdPair pair = getRegionAndId(ctx, payload);
             JsonNode suiteData;
             if (ctx.devel_mode()){
@@ -42,25 +53,36 @@ public final class Suite {
             }
             JsonNode userCardsNode = suiteData.get("userCards");
             ArrayList<PjskCard> pjskCards = new ArrayList<>();
-            double counts = userCardsNode.size();
-            double got = 0;
+            int counts = userCardsNode.size();
+            long startMs = System.currentTimeMillis();
             if (userCardsNode.isArray()) {
                 for (JsonNode userCardNode : userCardsNode) {
                     PjskCardInfo info = LocalResourceData.
                             getCachedCardInfo(ctx,userCardNode.get("cardId").asInt());
                     PjskCard card = new PjskCard(userCardNode, info);
-                    card.setThumbnails(new ImageRenderer.Card(ctx,card).draw());
+                    card.setThumbnails(new ImageRenderer.Card(ctx,card).draw());//慢死了
                     pjskCards.add(card);
-                    got++;
-                    log.info("Pjsk Box Picture getting process: {}% done.",got/counts*100);
                 }
             }
+            long stopMs = System.currentTimeMillis();
+            log.info("Pjsk Box Picture rendering process: {} pictures done,Used {}ms.",counts,stopMs-startMs);
             BufferedImage boxImage = new ImageRenderer.Box(ctx,pjskCards).draw();
             String boxImgUuid = ctx.imageCacheService().cacheImage(boxImage);
             String boxImgUrl = ctx.networkEndpoint() +"/cache/resource/imgs/png/" + boxImgUuid;
             if (boxImgUuid == null) {throw new InternalServerErrorException();}
-            ctx.sender().sendImage(payload,boxImgUrl);
-            //TODO:获取thumbnails,考虑是否缓存单个卡面，渲染图片 注意：卡面分为Original和SpecialTraining
+
+            ActionChainBuilder chainBuilder = ctx.actionChainBuilder().create()
+                    .setReplay(payload.getMessageId())
+                    .image(boxImgUrl);
+
+            String json = payload.getMessageType().equals("group") ?
+                    chainBuilder.toGroupJson(payload.getGroupId()) :
+                    chainBuilder.toPrivateJson(payload.getUserId());
+
+            ctx.sender().pushActionJSON(payload.getSelfId(), json);
+
+            //ctx.sender().sendImage(payload,boxImgUrl);
+            //TODO:考虑是否缓存单个已渲染的卡面 注意：卡面分为Original和SpecialTraining
         }catch (NullPointerException e){
             throw new InternalServerErrorException("Error in getting user card id");
         }catch (IOException e){
@@ -101,6 +123,25 @@ public final class Suite {
 
     // ***** ======== FOR OFFLINE MODE ONLY ============ *****
     // ***** ======== FOR OFFLINE MODE ONLY ============ *****
+
+    // ***** ============= account query  ============= *****
+    // ***** ============= account query  ============= *****
+    // ***** ============= account query  ============= *****
+
+    private static LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId, String serverRegion) {
+        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(PjskBinding::getUserId, userId).eq(PjskBinding::getServerRegion, serverRegion);
+        if (groupId == null) {
+            queryWrapper.isNull(PjskBinding::getGroupId);
+        } else {
+            queryWrapper.eq(PjskBinding::getGroupId, groupId);
+        }
+        return queryWrapper;
+    }
+
+    private static LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId) {
+        return queryBinding(userId, groupId, "cn");
+    }
 
 
     // ***** ============= request helper ============= *****

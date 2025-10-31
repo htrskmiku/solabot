@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.awt.*;
 import java.nio.file.Path;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -100,6 +99,8 @@ public class Pjsk extends Plugin {
     String localOverviewPath;
     @Value("${app.local-path.pjsk-resource.static.master-data.root}")
     private String masterDataPath;
+    @Value("${app.local-path.pjsk-resource.static.master-data.cards}")
+    private String cardsDataPath;
     @Value("${app.parameter.plugin.pjsk.external-api.hrk.suite-api}")
     private String suiteApi;
     @Value("${app.parameter.plugin.pjsk.external-api.hrk.mysekai-api}")
@@ -107,9 +108,9 @@ public class Pjsk extends Plugin {
     @Value("${app.parameter.plugin.pjsk.external-api.uni.thumbnail-api}")
     private String thumbnailApi;
 
-    @Value("${app.api-path.plugin.pjsk.devel_mode}")
+    @Value("${app.parameter.plugin.pjsk.devel_mode}")
     private boolean devel_mode;
-    @Value("${app.api-path.plugin.pjsk.cache_cards_thumbnails}")
+    @Value("${app.parameter.plugin.pjsk.cache_cards_thumbnails}")
     private boolean cache_cards_thumbnails;
 
     /**
@@ -137,6 +138,7 @@ public class Pjsk extends Plugin {
                             Path.of(localMapPath).toAbsolutePath().normalize(),
                             Path.of(localOverviewPath).toAbsolutePath().normalize(),
                             Path.of(masterDataPath).toAbsolutePath().normalize(),
+                            Path.of(cardsDataPath).toAbsolutePath().normalize(),
                             suiteApi,
                             mysekaiApi,
                             thumbnailApi,
@@ -165,10 +167,12 @@ public class Pjsk extends Plugin {
         Path localMapPath();
         Path localOverviewPath();
         Path masterDataPath();
+        Path cardsDataPath();
         String suiteApi();
         String mysekaiApi();
         String thumbnailApi();
         boolean devel_mode();
+        boolean cache_cards_thumbnails();
     }
 
     public record CoreBeanContext(
@@ -187,6 +191,7 @@ public class Pjsk extends Plugin {
             Path localMapPath,
             Path localOverviewPath,
             Path masterDataPath,
+            Path cardsDataPath,
             String suiteApi,
             String mysekaiApi,
             String thumbnailApi,

@@ -1,7 +1,8 @@
-package com.arth.bot.plugin.custom.pjsk.utils.pair;
+package com.arth.bot.plugin.custom.pjsk.objects;
 
 
 import com.arth.bot.plugin.custom.pjsk.objects.enums.CardAttributes;
+import com.arth.bot.plugin.custom.pjsk.objects.enums.CardCharacters;
 import com.arth.bot.plugin.custom.pjsk.objects.enums.CardRarities;
 
 /**
@@ -9,7 +10,7 @@ import com.arth.bot.plugin.custom.pjsk.objects.enums.CardRarities;
  * @param cardAttribute CardAttribute
  * @param rarities CardRarities
  */
-public record PjskCardInfo(String assetsBundle, CardAttributes cardAttribute, CardRarities rarities) {
+public record PjskCardInfo(String assetsBundle, CardAttributes cardAttribute, CardRarities rarities, CardCharacters characters) {
 
     public String getAssetsBundle(String left) {
         return assetsBundle;
@@ -20,5 +21,7 @@ public record PjskCardInfo(String assetsBundle, CardAttributes cardAttribute, Ca
     }
 
     public CardRarities getRarities() {return rarities;}
+
+    public CardCharacters getCharacters() {return characters;}
 }
 

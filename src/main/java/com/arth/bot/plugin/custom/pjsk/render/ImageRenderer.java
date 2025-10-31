@@ -1,69 +1,48 @@
-package com.arth.bot.plugin.custom.pjsk.utils;
+package com.arth.bot.plugin.custom.pjsk.render;
 
-import com.arth.bot.adapter.fetcher.http.ImgService;
-import com.arth.bot.adapter.sender.Sender;
-import com.arth.bot.core.cache.service.ImageCacheService;
 import com.arth.bot.plugin.custom.pjsk.Pjsk;
+import com.arth.bot.plugin.custom.pjsk.func.AssetsBundleResources;
 import com.arth.bot.plugin.custom.pjsk.objects.PjskCard;
 import com.arth.bot.plugin.custom.pjsk.objects.enums.CardAttributes;
 import com.arth.bot.plugin.custom.pjsk.objects.enums.CardRarities;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
+import lombok.extern.slf4j.Slf4j;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
-import java.awt.*;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.io.File;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.Buffer;
 import java.util.*;
 
+@Slf4j
 @RequiredArgsConstructor
 public class ImageRenderer {
 
-
-//    public static void main(String[] args) throws IOException {
-//        //BufferedImage image = getBufferedImage("static/box/res021_no057_normal.png");
-//        //image = resize(image,140,140);
-//        BufferedImage boarder = getBufferedImage("static/box/boarder/rarity_4.png");
-//        BufferedImage rarity = getBufferedImage("static/box/star.png");
-//        BufferedImage attribute = getBufferedImage("static/box/attribute/cool.png");
-//
-//        rarity = resize(rarity,25,25);
-//        attribute = resize(attribute,30,30);
-//        //BufferedImage card = mergeImages(boarder,image,8,8);
-//        BufferedImage card = boarder;
-//        //card = mergeImages(boarder,rarity,5,130);
-//        for (int i=0;i<4;i++){
-//            card = mergeImages(card,rarity,9+25*i,124);
-//        }
-//        card = mergeImages(card,attribute,8,8);
-//        generateSaveFile(card,"static/box/out.png");
-//    }
     //懒得学，ai不香吗
     private static BufferedImage mergeImages(BufferedImage background,
                                             BufferedImage foreground,
                                             int x, int y) {
-        // 创建与背景图相同大小的新图像
-        BufferedImage combined = new BufferedImage(
-                background.getWidth(),
-                background.getHeight(),
-                BufferedImage.TYPE_INT_ARGB
-        );
         // 获取 Graphics2D 对象
-        Graphics2D g2d = combined.createGraphics();
-        // 设置渲染提示以获得更好的质量
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON);
+        Graphics2D g2d = background.createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING,
-                RenderingHints.VALUE_RENDER_QUALITY);
+                RenderingHints.VALUE_RENDER_SPEED);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+        g2d.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_OFF);
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
         // 绘制背景图
         g2d.drawImage(background, 0, 0, null);
         // 绘制前景图（自动处理Alpha通道）
         g2d.drawImage(foreground, x, y, null);
         g2d.dispose();
-        return combined;
+        return background;
     }
 
     /**
@@ -74,8 +53,8 @@ public class ImageRenderer {
      * @return
      */
     private static BufferedImage extendImage(BufferedImage image1,BufferedImage image2,int times){
-        int targetWidth = image1.getWidth() + image2.getWidth();
-        int targetHeight = image1.getHeight() + image2.getHeight();
+        int targetWidth = image1.getWidth() + image2.getWidth()*times;
+        int targetHeight = image1.getHeight();
         BufferedImage combined = new BufferedImage(
                 targetWidth,
                 targetHeight,
@@ -84,7 +63,7 @@ public class ImageRenderer {
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING,
-                RenderingHints.VALUE_RENDER_QUALITY);
+                RenderingHints.VALUE_RENDER_SPEED);
         g2d.drawImage(image1, 0, 0, null);
         for (int i = 0; i < times; i++) {
             g2d.drawImage(image1, image2.getWidth() + i*image2.getWidth(), 0, null);
@@ -93,23 +72,57 @@ public class ImageRenderer {
         return combined;
     }
 
-//    private static BufferedImage getBufferedImage(String fileUrl)
-//            throws IOException {
-//        File f = new File(fileUrl);
-//        return ImageIO.read(f);
+
+//    private static void generateSaveFile(BufferedImage buffImg, String savePath) {
+//        int temp = savePath.lastIndexOf(".") + 1;
+//        try {
+//            File outFile = new File(savePath);
+//            if(!outFile.exists()){
+//                outFile.createNewFile();
+//            }
+//            ImageIO.write(buffImg, savePath.substring(temp), outFile);
+//            System.out.println("ImageIO write...");
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 //    }
-//
-    private static void generateSaveFile(BufferedImage buffImg, String savePath) {
-        int temp = savePath.lastIndexOf(".") + 1;
+
+    /**
+     * 压缩 BufferedImage 为 PNG 格式
+     * @param image 原始图像
+     * @param compressionQuality 压缩质量 (0.0-1.0)
+     * @return 压缩后的 BufferedImage
+     */
+    public static BufferedImage compressPNG(BufferedImage image, float compressionQuality) {
         try {
-            File outFile = new File(savePath);
-            if(!outFile.exists()){
-                outFile.createNewFile();
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("png");
+            if (!writers.hasNext()) {
+                return image; // 无法压缩，返回原图
             }
-            ImageIO.write(buffImg, savePath.substring(temp), outFile);
-            System.out.println("ImageIO write...");
+
+            ImageWriter writer = writers.next();
+            ImageWriteParam param = writer.getDefaultWriteParam();
+
+            // 如果可以设置压缩模式，则设置
+            if (param.canWriteCompressed()) {
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(compressionQuality);
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageOutputStream ios = ImageIO.createImageOutputStream(baos);
+            writer.setOutput(ios);
+            writer.write(null, new IIOImage(image, null, null), param);
+
+            ios.close();
+            writer.dispose();
+
+            ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+            return ImageIO.read(bais);
+
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("PNG compression failed: " + e.getMessage());
+            return image;
         }
     }
 
@@ -125,12 +138,13 @@ public class ImageRenderer {
         BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = resizedImage.createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.drawImage(originalImage, 0, 0, width, height, null);
         g2d.dispose();
         return resizedImage;
     }
+
 
     //卡片渲染，大小固定为156*156
     public static class Card{
@@ -142,23 +156,22 @@ public class ImageRenderer {
         private BufferedImage rarityImage;
         private BufferedImage attributeImage;
         private BufferedImage output;
+        private Pjsk.BeanContext ctx;
         private boolean shouldDrawRarity = true;
         private boolean shouldDrawBoarder = true;
         private boolean shouldDrawAttribute = true;
         //https://assets.unipjsk.com/startapp/thumbnail/chara/{assetbundle_name}_{status}.png
         public Card(Pjsk.BeanContext ctx,PjskCard pjskCard){
-            ImgService imgService = ctx.imgService();
+            this.ctx = ctx;
             endpoint = ctx.networkEndpoint();
             attributes = pjskCard.getAttributes();
             rarities = pjskCard.getRarities();
-            thumbnails = imgService.getBufferedImg(ctx.thumbnailApi()
-                    .replace("{assetbundle_name}",pjskCard.getAssetsbundleName())
-                    .replace("{status}",pjskCard.getSpecialTrainingStatus()));
+            thumbnails = AssetsBundleResources.getOrCacheThumbnailByCard(ctx,pjskCard);
 
-            boarder = imgService.getBufferedImg(endpoint + "/pjsk/box/boarder/" + pjskCard.getRarities().name().toLowerCase() + ".png");
-            rarityImage = imgService.getBufferedImg(endpoint + "/pjsk/box/" +
+            boarder = ctx.imgService().getBufferedImg(endpoint + "/pjsk/box/boarder/" + pjskCard.getRarities().name().toLowerCase() + ".png");
+            rarityImage = ctx.imgService().getBufferedImg(endpoint + "/pjsk/box/" +
                     (pjskCard.getRarities().equals(CardRarities.RARITY_BIRTHDAY) ? "rarity_birthday.png" : "star.png"));
-            attributeImage = imgService.getBufferedImg(endpoint + "/pjsk/box/attribute/" + pjskCard.getAttributes().name().toLowerCase() + ".png");
+            attributeImage = ctx.imgService().getBufferedImg(endpoint + "/pjsk/box/attribute/" + pjskCard.getAttributes().name().toLowerCase() + ".png");
         }
         public void noDrawRarity(){shouldDrawRarity = false;}
         public void noDrawBoarder(){shouldDrawBoarder = false;}
@@ -166,22 +179,30 @@ public class ImageRenderer {
         public BufferedImage draw(){
             rarityImage = resize(rarityImage,25,25);
             attributeImage = resize(attributeImage,30,30);//缩小稀有度与属性标识
-
+            thumbnails = resize(thumbnails,140,140);
             if(shouldDrawBoarder){
-                output = mergeImages(boarder,thumbnails,8,8);//框+图
+                if (rarities.equals(CardRarities.RARITY_BIRTHDAY)){
+                    BufferedImage bufferedBoarder = ctx.imgService().deepCopy(boarder);//TODO：优化流程
+                    output = mergeImages(boarder,thumbnails,8,8);//基本框+缩略图
+                    mergeImages(output,bufferedBoarder,0,0);//再覆盖一次框，生日卡的框比较特殊
+                }else {
+                    output = mergeImages(boarder,thumbnails,8,8);//基本框+缩略图
+                }
+                //TODO:优化绘图流程，这里是史山
             }else{
                 output = thumbnails;
             }
             if (shouldDrawRarity) {
                 for (int i = 0; i < rarities.getDrawQuantity(); i++) {
-                    output = mergeImages(output, rarityImage, 9 + 25 * i, 124);//画稀有度
+                    mergeImages(output, rarityImage, 9 + 25 * i, 124);//画稀有度
                 }
             }
             if (shouldDrawAttribute) {
-                output = mergeImages(output,attributeImage,8,8);
+                mergeImages(output,attributeImage,8,8);
             }
 
-            return output;}
+            return output;
+        }
     }
 
 
@@ -192,7 +213,9 @@ public class ImageRenderer {
         private BufferedImage background;
         private BufferedImage output;
         private boolean descend = true;
+        private Pjsk.BeanContext ctx;
         public Box(Pjsk.BeanContext ctx,ArrayList<PjskCard> cards) {
+            this.ctx = ctx;
             endpoint = ctx.networkEndpoint();
             this.background = ctx.imgService().getBufferedImg(endpoint + "/pjsk/box/background.png");
             this.output = background;
@@ -207,26 +230,36 @@ public class ImageRenderer {
             this.descend = false;
             return this;
         }
+
+        /**
+         * 开始绘制，阻塞时间较长
+         * @return
+         */
         public BufferedImage draw(){
+            long startMs = System.currentTimeMillis();
             if(descend){
                 Collections.sort(cards);
             }
             //纵向排列
-            int extendTimes = cards.size() / 10 + 1;//需要扩展几次背景
+            int extendTimes = cards.size() / 60;//需要扩展几次背景
             output = extendImage(output,background,extendTimes);
             int singleColumnDrawn = 0;
             int columns = 0;
-            for (PjskCard card : cards) {
-                if (singleColumnDrawn > 10) {
+            for (PjskCard card : cards) {//慢死了
+                if (singleColumnDrawn >= 10) {
                     columns++;
                     singleColumnDrawn = 0;
                 }
-                mergeImages(output,card.getThumbnails(),45 + columns * 233,26 +  singleColumnDrawn * 233);
+                mergeImages(output,card.getThumbnails(),16 + columns * 240,26 +  singleColumnDrawn * 233);
                 singleColumnDrawn++;
             }
-            generateSaveFile(output,"static/out.png");
+            long stopMs = System.currentTimeMillis();
+            //generateSaveFile(output,"static/out.png");
+            output = resize(output, output.getWidth()/2, output.getHeight()/2);
+            log.info("Drawing box completed.Used {} ms.",stopMs-startMs);
             return output;
         }
+
     }
 
 }

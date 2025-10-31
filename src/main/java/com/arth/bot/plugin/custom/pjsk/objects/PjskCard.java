@@ -1,8 +1,8 @@
 package com.arth.bot.plugin.custom.pjsk.objects;
 
+import com.arth.bot.plugin.custom.pjsk.objects.enums.CardCharacters;
 import com.arth.bot.plugin.custom.pjsk.objects.enums.CardRarities;
 import com.arth.bot.plugin.custom.pjsk.objects.enums.CardAttributes;
-import com.arth.bot.plugin.custom.pjsk.utils.pair.PjskCardInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Data;
 
@@ -16,6 +16,7 @@ public class PjskCard implements Comparable<PjskCard>{
     }//降序排列
 
     private CardAttributes attributes;
+    private CardCharacters cardCharacters;
     private int level;
     private CardRarities rarities;
     private String specialTrainingStatus;
@@ -32,6 +33,7 @@ public class PjskCard implements Comparable<PjskCard>{
     public PjskCard(JsonNode userCardNode, PjskCardInfo info) {
         this.assetsbundleName = info.assetsBundle();
         this.attributes = info.cardAttribute();
+        this.cardCharacters = info.getCharacters();
         this.rarities = info.rarities();
         this.level = userCardNode.get("level").asInt();
         this.specialTrainingStatus = userCardNode.get("defaultImage")
