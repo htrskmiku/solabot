@@ -47,8 +47,8 @@ public class Pjsk extends Plugin {
     // ***** ============= Suite ============= *****
 
     @BotCommand({"box", "卡牌一览"})
-    public void box(ParsedPayloadDTO payload) {
-        Suite.box(getCtx(), payload);
+    public void box(ParsedPayloadDTO payload,List<String> args) {
+        Suite.box(getCtx(), payload,args);
     }
 
 

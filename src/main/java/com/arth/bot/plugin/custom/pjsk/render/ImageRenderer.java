@@ -19,13 +19,16 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
 @Slf4j
 @RequiredArgsConstructor
 public class ImageRenderer {
+    public enum ExtendDirection {
+        DOWN,
+        RIGHT
+    }
 
     //懒得学，ai不香吗
     private static BufferedImage mergeImages(BufferedImage background,
@@ -48,15 +51,32 @@ public class ImageRenderer {
     }
 
     /**
-     * 扩展图片
-     * @param image1
-     * @param image2
+     * 将传入图片多次拼接以扩展图片分辨率
+     * @param image
      * @param times
+     * @param direction
      * @return
      */
-    private static BufferedImage extendImage(BufferedImage image1,BufferedImage image2,int times){
-        int targetWidth = image1.getWidth() + image2.getWidth()*times;
-        int targetHeight = image1.getHeight();
+    private static BufferedImage extendImage(BufferedImage image,int times,ExtendDirection direction) {
+        int imageWidth = image.getWidth();
+        int imageHeight = image.getHeight();
+        int targetWidth;
+        int targetHeight;
+        switch (direction) {
+            case RIGHT:
+                targetWidth = image.getWidth() + image.getWidth()*times;
+                targetHeight = image.getHeight();
+                break;
+            case DOWN:
+                targetWidth = image.getWidth();
+                targetHeight = image.getHeight() + image.getHeight()*times;
+                break;
+            default:
+                targetWidth =  image.getWidth();
+                targetHeight = image.getHeight();
+                break;
+        }
+
         BufferedImage combined = new BufferedImage(
                 targetWidth,
                 targetHeight,
@@ -66,10 +86,22 @@ public class ImageRenderer {
                 RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING,
                 RenderingHints.VALUE_RENDER_SPEED);
-        g2d.drawImage(image1, 0, 0, null);
-        for (int i = 0; i < times; i++) {
-            g2d.drawImage(image1, image2.getWidth() + i*image2.getWidth(), 0, null);
+        g2d.drawImage(image, 0, 0, null);
+        switch (direction) {
+            case DOWN:
+                for (int i = 0; i < times; i++) {
+                    g2d.drawImage(image, 0 , (i+1)*image.getHeight(), null);
+                }
+                break;
+            case RIGHT:
+            default:
+                for (int i = 0; i < times; i++) {
+                    g2d.drawImage(image, imageWidth + i*imageWidth, 0, null);
+                }
+                break;
+
         }
+
         g2d.dispose();
         return combined;
     }
@@ -208,39 +240,28 @@ public class ImageRenderer {
 
     //输出渲染box,单个背景最多可放60张卡(5x10)
     public static class Box{
+        public enum BoxDrawMethod{
+            RARITIES_IN_DESCEND,
+            CHARA_ID_IN_ASCEND;
+        }
         private ArrayList<PjskCard> cards;
         private BufferedImage background;
         private BufferedImage output;
-        private boolean descend = true;
-        private Pjsk.BeanContext ctx;
-        public Box(Pjsk.BeanContext ctx,ArrayList<PjskCard> cards) throws IOException {
-            this.ctx = ctx;
+        public Box(ArrayList<PjskCard> cards) throws IOException {
             this.background = ImageIO.read(ResourceUtils.getFile("src/main/resources/static/pjsk/box/background.png"));
             this.output = background;
             this.cards = cards;
         }
 
-        /**
-         * 关闭降序排列，将按卡id升序绘制
-         * @return
-         */
-        public Box noDescend(){
-            this.descend = false;
-            return this;
-        }
 
         /**
-         * 开始绘制，阻塞时间较长
+         * 根据稀有度降序
          * @return
          */
-        public BufferedImage draw(){
-            long startMs = System.currentTimeMillis();
-            if(descend){
-                Collections.sort(cards);
-            }
+        private BufferedImage drawByCharities(){
             //纵向排列
             int extendTimes = cards.size() / 60;//需要扩展几次背景
-            output = extendImage(output,background,extendTimes);
+            output = extendImage(background,extendTimes,ExtendDirection.RIGHT);
             int singleColumnDrawn = 0;
             int columns = 0;
             for (PjskCard card : cards) {//慢死了
@@ -251,12 +272,69 @@ public class ImageRenderer {
                 mergeImages(output,card.getThumbnails(),16 + columns * 240,26 +  singleColumnDrawn * 233);
                 singleColumnDrawn++;
             }
-            long stopMs = System.currentTimeMillis();
             //generateSaveFile(output,"static/out.png");
             output = resize(output, output.getWidth()/2, output.getHeight()/2);
-            log.info("Drawing box completed.Used {} ms.",stopMs-startMs);
             return output;
         }
+
+        /**
+         * 根据角色ID排序
+         * @return
+         */
+        private BufferedImage drawByCharacterId(){
+            //output = extendImage(background,4,ExtendDirection.RIGHT);
+            cards.sort(Comparator.comparingInt(a -> a.getCardCharacters().getCharaId()));
+            cards.sort((a,b)->{
+                if (a.getCardCharacters().getCharaId() == b.getCardCharacters().getCharaId()) {
+                    return -Integer.compare(a.getRarities().getRarity(),b.getRarities().getRarity());
+                }
+                return 0;
+            });
+            //首先按角色ID升序，再按稀有度降序
+            int[] countOfEachCharacter = new int[26];//每个角色的卡数
+            for (PjskCard pjskCard : cards) {
+                countOfEachCharacter[pjskCard.getCardCharacters().getCharaId()-1]++;
+            }
+            Arrays.sort(countOfEachCharacter);
+            int maxCardCount = countOfEachCharacter[25];//选取最多的一项，这里可以优化吗？不懂
+            int extendPages = maxCardCount/10;
+            output = resize(background, 6500, background.getHeight() * (extendPages+1));
+            //output = extendImage(output,extendPages,ExtendDirection.DOWN);
+            short drawColumn = 0;
+            short drawRow = 0;
+            for(int i = 0; i < cards.size(); i++){
+                mergeImages(output,cards.get(i).getThumbnails(),16 + drawColumn * 240,drawRow * 233);
+                drawRow++;
+                if(i+1 != cards.size() && cards.get(i).getCardCharacters() != cards.get(i+1).getCardCharacters()){
+                    drawColumn++;
+                    drawRow = 0;
+                }
+            }
+            output = resize(output,output.getWidth()/2,output.getHeight()/2);
+            return output;
+        }
+
+        /**
+         * 开始绘制，阻塞时间较长
+         * @return
+         */
+        public BufferedImage draw(BoxDrawMethod drawMethod){
+            long startMs = System.currentTimeMillis();
+            BufferedImage image;
+            switch (drawMethod){
+                case RARITIES_IN_DESCEND:
+                    image = drawByCharities();
+                    break;
+                case CHARA_ID_IN_ASCEND:
+                default:
+                    image = drawByCharacterId();
+            }
+
+            long stopMs = System.currentTimeMillis();
+            log.info("Drawing box completed.Used {} ms.",stopMs-startMs);
+            return image;
+        }
+
 
     }
 
