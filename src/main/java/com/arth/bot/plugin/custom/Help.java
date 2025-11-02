@@ -33,13 +33,13 @@ public class Help extends Plugin {
                         可以通过 “/help 模块名” 或 “/模块名 help” 单独查看指定模块的帮助文档"""))
                 .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                         pjsk 啤酒烧烤模块目前支持以下命令：
-                          - 绑定 <pjsk id>: 绑定 pjsk 账号
+                          - 绑定 <pjsk id> <可选 cn/tw/jp>: 绑定 pjsk 账号，默认国服
                           - 绑定 / 查询绑定: 查看 pjsk 账号的绑定
-                          - msm: 查看所绑定的 mysekai 数据
-                          - box <-r>: 查询 box，已实装，半成品，不加参数为按角色排序，-r参数为按稀有度降序排列
+                          - msm <可选 cn/tw/jp>: 查看所绑定的 mysekai 数据
+                          - box <-r> <可选 cn/tw/jp>: 查询 box，已实装，半成品，不加参数为按角色排序，-r参数为按稀有度降序排列，默认国服
                           - luna茶的组卡器，尚未实装"""));
 
-        if (payload.getGroupId() == null || payload.getGroupId().equals(619096416L) || payload.getGroupId().equals(1036993047L) || payload.getGroupId().equals(570656202L) || payload.getGroupId().equals(992406250L)) {
+        if (payload.getGroupId() == null || payload.getGroupId().equals(619096416L) || payload.getGroupId().equals(1036993047L) || payload.getGroupId().equals(570656202L) || payload.getGroupId().equals(992406250L) || payload.getGroupId().equals(916204609L)) {
             building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                             我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""

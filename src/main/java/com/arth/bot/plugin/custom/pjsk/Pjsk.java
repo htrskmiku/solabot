@@ -70,6 +70,15 @@ public class Pjsk extends Plugin {
         Mysekai.msm(getCtx(), payload);
     }
 
+    @BotCommand({"msm", "msr"})
+    public void msm(ParsedPayloadDTO payload, List<String> args) {
+        if (args == null || args.isEmpty()) {
+            msm(payload);
+        } else {
+            Mysekai.msm(getCtx(), payload, args.get(0));
+        }
+    }
+
     // ***** ============= ctx ============= *****
     // ***** ============= ctx ============= *****
     // ***** ============= ctx ============= *****
