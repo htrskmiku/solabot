@@ -1,5 +1,6 @@
 package com.arth.bot.plugin.custom;
 
+import com.arth.bot.adapter.controller.ApiPaths;
 import com.arth.bot.adapter.sender.Sender;
 import com.arth.bot.adapter.sender.action.ForwardChainBuilder;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
@@ -15,6 +16,7 @@ public class Help extends Plugin {
 
     private final Sender sender;
     private final ForwardChainBuilder forwardChainBuilder;
+    private final ApiPaths apiPaths;
 
     @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
@@ -37,26 +39,12 @@ public class Help extends Plugin {
                           - box: 查询 box，尚未实装
                           - luna茶的组卡器，尚未实装"""));
 
-        if (payload.getGroupId() == null || payload.getGroupId().equals(619096416L) || payload.getGroupId().equals(1036993047L) || payload.getGroupId().equals(570656202L)) {
+        if (payload.getGroupId() == null || payload.getGroupId().equals(619096416L) || payload.getGroupId().equals(1036993047L) || payload.getGroupId().equals(570656202L) || payload.getGroupId().equals(992406250L)) {
             building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                             我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                            👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服为例（需要其他服的模块可联系我）："""))
-                    .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                            #!name=国服烤森远程转发
-                            #!desc=抓取游戏数据并转发到远程服务器
-                            #!author=魔改自NeuraXmy
-                            #!mitm=2
-                            #!total=3
-                            
-                            [URL Rewrite]
-                            ^https:\\/\\/submit\\.backtr        ace\\.io\\/  reject
-                            
-                            [Script]
-                            SCRIPT_upload = type=http-response, requires-body=1, binary-body-mode=1, max-size=100000000, timeout=60, pattern=^https:\\/\\/mkcn-prod-public-60001-1\\.dailygn\\.com\\/api\\/user\\/(\\d+)\\/mysekai\\?isForceAllReloadOnlyMysekai\\=(True|False)$, script-path=https://yly.dylancloud.uk/upload.js
-                            
-                            [Mitm]
-                            hostname=%APPEND% mkcn-prod-public-60001-1.dailygn.com, submit.backtrace.io"""))
+                            👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服+为例（需要其他服的模块可联系我）：在 配置→模块→右上角➕︎号，填入下面这个地址："""))
+                    .addCustomNode(payload.getSelfId(), "bot", n -> n.text(ApiPaths.SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                             模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块替换为我们的"""));
         } else {

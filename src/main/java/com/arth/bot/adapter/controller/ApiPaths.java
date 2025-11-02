@@ -9,33 +9,41 @@ public class ApiPaths {
     @Value("${app.client-access-network-endpoint}")
     String networkEndpoint;
 
-    // CacheService 相关路径
-    public static final String CACHE_IMG_PNG = "/cache/resource/imgs/png/{uuid}";
-    public static final String CACHE_IMG_GIF = "/cache/resource/imgs/gif/{uuid}";
-    public static final String CACHE_IMG = "/cache/resource/{type}/gif/{uuid}";
+    /*
+      CacheService 相关路径
+    */
+    public static final String CACHE_IMG_PNG = "/api/v1/cache/imgs/png/{uuid}";
+    public static final String CACHE_IMG_GIF = "/api/v1/cache/imgs/gif/{uuid}";
+    public static final String CACHE_IMG = "/api/v1/cache/{type}/gif/{uuid}";
 
     public String buildPngUrl(String uuid) {
-        return networkEndpoint + "/cache/resource/imgs/png/" + uuid;
+        return networkEndpoint + "/api/v1/cache/imgs/png/" + uuid;
     }
 
     public String buildGifUrl(String uuid) {
-        return networkEndpoint + "/cache/resource/imgs/gif/" + uuid;
+        return networkEndpoint + "/api/v1/cache/imgs/gif/" + uuid;
     }
 
     public String buildImgUrl(String type, String uuid) {
-        return networkEndpoint + "/cache/resource/" + type + "/gif/" + uuid;
+        return networkEndpoint + "/api/v1/cache/" + type + "/gif/" + uuid;
     }
 
 
-    // PJSK 相关路径
-    public static final String PJSK_MYSEKAI_MAP = "/pjsk/resource/{region}/mysekai/{id}/map";
-    public static final String PJSK_MYSEKAI_OVERVIEW = "/pjsk/resource/{region}/mysekai/{id}/overview";
+    /*
+      PJSK 相关路径
+     */
+    public static final String PJSK_MYSEKAI_MAP = "/api/v1/pjsk/resource/{region}/mysekai/{id}/map";
+    public static final String PJSK_MYSEKAI_OVERVIEW = "/api/v1/pjsk/resource/{region}/mysekai/{id}/overview";
+    public static final String PJSK_UPLOAD_JS = "/upload.js";
+    public static final String PJSK_UPLOAD = "/upload";
+    public static final String SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN = "/api/v1/pjsk/module/cn/mysekai";
+
 
     public String buildMysekaiMapUrl(String region, String id) {
-        return networkEndpoint + "/pjsk/resource/" + region + "/mysekai/" + id + "/map";
+        return networkEndpoint + "/api/v1/pjsk/resource/" + region + "/mysekai/" + id + "/map";
     }
 
     public String buildMysekaiOverviewUrl(String region, String id) {
-        return networkEndpoint + "/pjsk/resource/" + region + "/mysekai/" + id + "/overview";
+        return networkEndpoint + "/api/v1/pjsk/resource/" + region + "/mysekai/" + id + "/overview";
     }
 }

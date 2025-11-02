@@ -1,5 +1,5 @@
 # 服务器配置
-IN_PORT = 6666
+IN_PORT = 8849
 OUT_PORT = 443
 LOCAL_IP = 'yly.dylancloud.uk'
 

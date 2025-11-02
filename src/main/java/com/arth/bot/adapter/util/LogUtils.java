@@ -1,8 +1,11 @@
 package com.arth.bot.adapter.util;
 
-public class LogHelper {
+public class LogUtils {
 
     private final static int MAX_LOG_LENGTH = 50;
+
+    private LogUtils() {
+    }
 
     public static String limitLen(String s) {
         return limitLen(s, MAX_LOG_LENGTH);

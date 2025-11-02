@@ -9,16 +9,19 @@ import com.arth.bot.core.common.dto.replay.ImageRef;
 import com.arth.bot.core.common.dto.replay.MediaSourceType;
 import com.arth.bot.core.common.dto.replay.VideoRef;
 
-public class CQHelper {
+public class CQUtils {
 
-    private CQHelper() {}
+    private CQUtils() {
+    }
 
     // [CQ:image,...] / [CQ:record,...] / [CQ:video,...]
     // group(1)=type, group(2)= ",k=v,k=v"
     private static final Pattern CQ_TAG =
             Pattern.compile("\\[CQ:([a-zA-Z0-9_]+)((?:,[^\\]]+)?)\\]");
 
-    /** 把 CQ 串里的媒体段提取进 DTO，并把剩下纯文本放进 dto.addText(...) */
+    /**
+     * 把 CQ 串里的媒体段提取进 DTO，并把剩下纯文本放进 dto.addText(...)
+     */
     public static void fillFromCQ(String cq, ReplayedMessagePayloadDTO dto) {
         if (cq == null) return;
 
@@ -27,7 +30,7 @@ public class CQHelper {
         while (m.find()) {
             String type = m.group(1);
             String kvRaw = m.group(2);
-            Map<String,String> kv = parseKV(kvRaw);
+            Map<String, String> kv = parseKV(kvRaw);
 
             switch (type) {
                 case "image" -> dto.addImage(fromImageKV(kv));
@@ -44,8 +47,8 @@ public class CQHelper {
 
     /* ---------------- internal helpers ---------------- */
 
-    private static Map<String,String> parseKV(String kvRaw) {
-        Map<String,String> m = new LinkedHashMap<>();
+    private static Map<String, String> parseKV(String kvRaw) {
+        Map<String, String> m = new LinkedHashMap<>();
         if (kvRaw == null || kvRaw.isEmpty()) return m;
         // 去掉起始的逗号
         String s = kvRaw.charAt(0) == ',' ? kvRaw.substring(1) : kvRaw;
@@ -70,44 +73,68 @@ public class CQHelper {
                 .replace("&#10;", "\n");
     }
 
-    private static ImageRef fromImageKV(Map<String,String> kv) {
+    private static ImageRef fromImageKV(Map<String, String> kv) {
         String url = kv.get("url");
         String file = kv.get("file");
         ImageRef ref = new ImageRef();
-        if (notBlank(url)) { ref.setSourceType(MediaSourceType.URL); ref.setSource(url); }
-        else { ref.setSourceType(MediaSourceType.FILE_ID); ref.setSource(file == null ? "" : file); }
+        if (notBlank(url)) {
+            ref.setSourceType(MediaSourceType.URL);
+            ref.setSource(url);
+        } else {
+            ref.setSourceType(MediaSourceType.FILE_ID);
+            ref.setSource(file == null ? "" : file);
+        }
         ref.setMime(kv.get("mime"));
         ref.setFilename(kv.get("filename"));
-        if (kv.containsKey("width"))  ref.setWidth(safeInt(kv.get("width")));
+        if (kv.containsKey("width")) ref.setWidth(safeInt(kv.get("width")));
         if (kv.containsKey("height")) ref.setHeight(safeInt(kv.get("height")));
         ref.setMd5(kv.get("md5"));
         return ref;
     }
 
-    private static AudioRef fromAudioKV(Map<String,String> kv) {
+    private static AudioRef fromAudioKV(Map<String, String> kv) {
         String url = kv.get("url");
         String file = kv.get("file");
         AudioRef ref = new AudioRef();
-        if (notBlank(url)) { ref.setSourceType(MediaSourceType.URL); ref.setSource(url); }
-        else { ref.setSourceType(MediaSourceType.FILE_ID); ref.setSource(file == null ? "" : file); }
+        if (notBlank(url)) {
+            ref.setSourceType(MediaSourceType.URL);
+            ref.setSource(url);
+        } else {
+            ref.setSourceType(MediaSourceType.FILE_ID);
+            ref.setSource(file == null ? "" : file);
+        }
         ref.setMime(kv.get("mime"));
         ref.setFilename(kv.get("filename"));
         if (kv.containsKey("duration")) ref.setDurationSec(safeInt(kv.get("duration")));
         return ref;
     }
 
-    private static VideoRef fromVideoKV(Map<String,String> kv) {
+    private static VideoRef fromVideoKV(Map<String, String> kv) {
         String url = kv.get("url");
         String file = kv.get("file");
         VideoRef ref = new VideoRef();
-        if (notBlank(url)) { ref.setSourceType(MediaSourceType.URL); ref.setSource(url); }
-        else { ref.setSourceType(MediaSourceType.FILE_ID); ref.setSource(file == null ? "" : file); }
+        if (notBlank(url)) {
+            ref.setSourceType(MediaSourceType.URL);
+            ref.setSource(url);
+        } else {
+            ref.setSourceType(MediaSourceType.FILE_ID);
+            ref.setSource(file == null ? "" : file);
+        }
         ref.setMime(kv.get("mime"));
         ref.setFilename(kv.get("filename"));
         if (kv.containsKey("duration")) ref.setDurationSec(safeInt(kv.get("duration")));
         return ref;
     }
 
-    private static boolean notBlank(String s){ return s != null && !s.isBlank(); }
-    private static Integer safeInt(String s){ try { return Integer.parseInt(s); } catch (Exception e){ return null; } }
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    private static Integer safeInt(String s) {
+        try {
+            return Integer.parseInt(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

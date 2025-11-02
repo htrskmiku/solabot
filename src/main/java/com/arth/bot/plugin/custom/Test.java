@@ -107,7 +107,7 @@ public class Test extends Plugin {
      */
     @BotCommand("tu")
     public void tu(ParsedPayloadDTO payload) {
-        String url = endpoint + "/saki.jpg";
+        String url = endpoint + "/test//saki.jpg";
         sender.replyImage(payload, List.of(url, url, url));
     }
 
@@ -118,7 +118,7 @@ public class Test extends Plugin {
      */
     @BotCommand("shipin")
     public void shipin(ParsedPayloadDTO payload) {
-        String url = endpoint + "/icsk.mp4";
+        String url = endpoint + "/test/icsk.mp4";
         sender.sendVideo(payload, url);
     }
 

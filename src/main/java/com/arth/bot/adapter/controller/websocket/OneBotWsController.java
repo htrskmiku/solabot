@@ -3,7 +3,7 @@ package com.arth.bot.adapter.controller.websocket;
 import com.arth.bot.adapter.fetcher.websocket.EchoWaiter;
 import com.arth.bot.adapter.parser.PayloadParser;
 import com.arth.bot.adapter.io.SessionRegistry;
-import com.arth.bot.adapter.util.LogHelper;
+import com.arth.bot.adapter.util.LogUtils;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.BusinessException;
 import com.arth.bot.core.invoker.CommandInvoker;
@@ -48,7 +48,7 @@ public class OneBotWsController extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        log.info("[adapter.controller] ws connected: {}", session.getId());
+        log.info("[adapter.ws] ws connected: {}", session.getId());
     }
 
     @Override
@@ -101,11 +101,11 @@ public class OneBotWsController extends TextWebSocketHandler {
 
             if ("message".equals(dto.getPostType()) || "message_sent".equals(dto.getPostType())) {
                 if (dto.getMessageType().equals("group")) {
-                    log.info("[adapter.controller] receive group message, group id: {}, user id: {}, text: {}", dto.getGroupId(), dto.getUserId(), LogHelper.limitLen(dto.getRawText()));
+                    log.info("[adapter.ws] receive group message, group id: {}, user id: {}, text: {}", dto.getGroupId(), dto.getUserId(), LogUtils.limitLen(dto.getRawText()));
                 } else {
-                    log.info("[adapter.controller] receive private message, user id: {}, text: {}", dto.getUserId(), LogHelper.limitLen(dto.getRawText()));
+                    log.info("[adapter.ws] receive private message, user id: {}, text: {}", dto.getUserId(), LogUtils.limitLen(dto.getRawText()));
                 }
-                log.debug("[adapter.controller] raw payload: {}", rawPayload);
+                log.debug("[adapter.ws] raw payload: {}", rawPayload);
 
                 /* 多线程异步解析命令 */
                 executorService.execute(() -> {
@@ -119,7 +119,7 @@ public class OneBotWsController extends TextWebSocketHandler {
             }
 
         } catch (Exception e) {
-            log.error("[adapter.controller] ws pipeline error", e);
+            log.error("[adapter.ws] ws pipeline error", e);
         }
     }
 
@@ -136,14 +136,14 @@ public class OneBotWsController extends TextWebSocketHandler {
 //                    session.sendMessage(new TextMessage(String.valueOf(res)));
 //                }
 //            } catch (Exception e) {
-//                log.warn("[adapter.controller] send failed", e);
+//                log.warn("[adapter.ws] send failed", e);
 //            }
 //        }
 //    }
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) {
-        log.error("[adapter.controller] transport error", exception);
+        log.error("[adapter.ws] transport error", exception);
     }
 
     @Override
@@ -153,7 +153,7 @@ public class OneBotWsController extends TextWebSocketHandler {
         int code = status.getCode();
         String reason = status.getReason();
         // 有些时候并不是我们主动希望断开的，可能是缓冲区溢出等问题，例如 code 1009，打印信息
-        log.info("[adapter.controller] ws closed: {}, code: {}, reason: {}", session.getId(), code, reason);
+        log.info("[adapter.ws] ws closed: {}, code: {}, reason: {}", session.getId(), code, reason);
         partialBuffer.remove(session.getId());
     }
 }

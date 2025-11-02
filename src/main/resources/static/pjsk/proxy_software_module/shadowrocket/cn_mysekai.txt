@@ -1,0 +1,14 @@
+#!name=将国服烤森数据转发至服务器
+#!desc=抓取国服烤森数据并转发到服务器以进行处理和分析
+#!author=魔改自NeuraXmy
+#!mitm=2
+#!total=3
+
+[URL Rewrite]
+^https:\/\/submit\.backtrace\.io\/  reject
+
+[Script]
+SCRIPT_upload = type=http-response, requires-body=1, binary-body-mode=1, max-size=100000000, timeout=60, pattern=^https:\/\/mkcn-prod-public-60001-(?:1|2)\.dailygn\.com\/api\/suite\/user\/(\d+)$, script-path=https://yly.dylancloud.uk/upload.js
+
+[Mitm]
+hostname=%APPEND% mkcn-prod-public-60001-1.dailygn.com, mkcn-prod-public-60001-2.dailygn.com, submit.backtrace.io
