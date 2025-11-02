@@ -14,6 +14,7 @@ import com.arth.bot.plugin.custom.pjsk.objects.PjskCard;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -25,6 +26,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 @Slf4j
 public final class Suite {
@@ -32,23 +37,38 @@ public final class Suite {
     private Suite(){}
 
 
-    public static void box(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
-        long userId = payload.getUserId();
-        Long groupId = payload.getGroupId();
-        PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
+    public static void box(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload,List<String> args) {
+        if(!ctx.devel_mode()){
+            long userId = payload.getUserId();
+            Long groupId = payload.getGroupId();
+            PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
 
-        if (binding == null) {
-            ctx.sender().replyText(payload, "数据库中没有查询到你绑定的 pjsk 账号哦");
-            return;
-        }
+            if (binding == null) {
+                ctx.sender().replyText(payload, "数据库中没有查询到你绑定的 pjsk 账号哦");
+                return;
+            }
+        }//判断是否为开发模式
+
+        ImageRenderer.Box.BoxDrawMethod boxDrawMethod = ImageRenderer.Box.BoxDrawMethod.CHARA_ID_IN_ASCEND;
+        if (!args.isEmpty()) {
+            switch (args.get(0)) {
+                case "-r":
+                    boxDrawMethod = ImageRenderer.Box.BoxDrawMethod.RARITIES_IN_DESCEND;
+                    break;
+                case "-c":
+                default:
+                    break;
+            }
+        }//判断参数，后面得该改
 
         try {
             ctx.sender().replyText(payload,"已经收到查Box请求，正在生成图片，生成时间较长，请耐心等待");
-            RegionIdPair pair = getRegionAndId(ctx, payload);
+            RegionIdPair pair;
             JsonNode suiteData;
             if (ctx.devel_mode()){
                 suiteData = getDefaultSuite(ctx);
             }else {
+                pair = getRegionAndId(ctx, payload);
                 suiteData = requestSuite(ctx, pair.left(), pair.right());
             }
             JsonNode userCardsNode = suiteData.get("userCards");
@@ -66,7 +86,7 @@ public final class Suite {
             }
             long stopMs = System.currentTimeMillis();
             log.info("Pjsk Box Picture rendering process: {} pictures done,Used {}ms.",counts,stopMs-startMs);
-            BufferedImage boxImage = new ImageRenderer.Box(ctx,pjskCards).draw();
+            BufferedImage boxImage = new ImageRenderer.Box(pjskCards,boxDrawMethod).draw(true);//TODO:添加查box参数
             String boxImgUuid = ctx.imageCacheService().cacheImage(boxImage);
             String boxImgUrl = ctx.apiPaths().buildPngUrl(boxImgUuid);
             if (boxImgUuid == null) {throw new InternalServerErrorException();}
@@ -80,18 +100,19 @@ public final class Suite {
                     chainBuilder.toPrivateJson(payload.getUserId());
 
             ctx.sender().pushActionJSON(payload.getSelfId(), json);
-
+            //log.info("Box url: {}", boxImgUrl);
             //ctx.sender().sendImage(payload,boxImgUrl);
-            //TODO:考虑是否缓存单个已渲染的卡面 注意：卡面分为Original和SpecialTraining
         }catch (NullPointerException e){
             throw new InternalServerErrorException("Error in getting user card id");
         }catch (IOException e){
-            e.printStackTrace();
+            log.error(e.getMessage(),e);
             throw new ResourceNotFoundException("Error in getting asset bundle: cards.json not found");
         }catch (ResourceNotFoundException ignored){
+            throw new InternalServerErrorException("Error in getting asset bundle: cards.json not found");
             //???
         }
     }
+
 
     // ***** ============= advanced helper ============= *****
     // ***** ============= advanced helper ============= *****

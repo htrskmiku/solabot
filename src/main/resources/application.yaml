@@ -28,7 +28,7 @@ app:
 
     plugin:
       pjsk:
-        devel_mode: false #开发模式，当devel_mode=true时app仅从本机读取示例 suite，可在suite api服务器不可用/开发时启用
+        devel_mode: false  #开发模式，当devel_mode=true时app仅从本机读取示例 suite，可在suite api服务器不可用/开发时启用
         cache_cards_thumbnails: true #是否缓存已下载的卡面缩略图，存储空间小的机器慎用
         external-api:
           hrk:
