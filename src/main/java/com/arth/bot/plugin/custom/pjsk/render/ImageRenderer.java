@@ -7,6 +7,7 @@ import com.arth.bot.plugin.custom.pjsk.objects.enums.CardAttributes;
 import com.arth.bot.plugin.custom.pjsk.objects.enums.CardRarities;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.util.Pair;
 import org.springframework.util.ResourceUtils;
 
 import javax.imageio.IIOImage;
@@ -21,6 +22,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -209,8 +214,8 @@ public class ImageRenderer {
         public void noDrawBoarder(){shouldDrawBoarder = false;}
         public void noDrawAttribute(){shouldDrawAttribute = false;}
         public BufferedImage draw(){
-            rarityImage = resize(rarityImage,25,25);
-            attributeImage = resize(attributeImage,30,30);//缩小稀有度与属性标识
+            rarityImage = resize(rarityImage,30,30);
+            attributeImage = resize(attributeImage,40,40);//缩小稀有度与属性标识
             thumbnails = resize(thumbnails,140,140);
             if(shouldDrawBoarder){
                 if (rarities.equals(CardRarities.RARITY_BIRTHDAY)){
@@ -226,7 +231,7 @@ public class ImageRenderer {
             }
             if (shouldDrawRarity) {
                 for (int i = 0; i < rarities.getDrawQuantity(); i++) {
-                    mergeImages(output, rarityImage, 9 + 25 * i, 124);//画稀有度
+                    mergeImages(output, rarityImage, 9 + 30 * i, 118);//画稀有度
                 }
             }
             if (shouldDrawAttribute) {
@@ -247,8 +252,10 @@ public class ImageRenderer {
         private ArrayList<PjskCard> cards;
         private BufferedImage background;
         private BufferedImage output;
-        public Box(ArrayList<PjskCard> cards) throws IOException {
+        private BoxDrawMethod boxDrawMethod;
+        public Box(ArrayList<PjskCard> cards,BoxDrawMethod method) throws IOException {
             this.background = ImageIO.read(ResourceUtils.getFile("src/main/resources/static/pjsk/box/background.png"));
+            this.boxDrawMethod = method;
             this.output = background;
             this.cards = cards;
         }
@@ -258,10 +265,12 @@ public class ImageRenderer {
          * 根据稀有度降序
          * @return
          */
-        private BufferedImage drawByCharities(){
+        private BufferedImage drawByCharities(boolean parallel){
             //纵向排列
-            int extendTimes = cards.size() / 60;//需要扩展几次背景
-            output = extendImage(background,extendTimes,ExtendDirection.RIGHT);
+            int extendTimes = cards.size() / 60 + 1;//需要扩展几次背景
+            output = resize(background,background.getWidth() * extendTimes , background.getHeight());
+            List<Pair<Integer,Integer>> drawPositions = new ArrayList<>();
+            //output = extendImage(background,extendTimes,ExtendDirection.RIGHT);
             int singleColumnDrawn = 0;
             int columns = 0;
             for (PjskCard card : cards) {//慢死了
@@ -269,20 +278,58 @@ public class ImageRenderer {
                     columns++;
                     singleColumnDrawn = 0;
                 }
-                mergeImages(output,card.getThumbnails(),16 + columns * 240,26 +  singleColumnDrawn * 233);
-                singleColumnDrawn++;
+                if (parallel) {//如果为并行模式，则只获取渲染位置
+                    drawPositions.add(Pair.of(32 + columns * 240,26 + singleColumnDrawn * 233));
+                    singleColumnDrawn++;
+                }else {
+                    mergeImages(output,card.getThumbnails(),32 + columns * 240,26 +  singleColumnDrawn * 233);
+                    singleColumnDrawn++;
+                }
             }
-            //generateSaveFile(output,"static/out.png");
+            if (parallel){
+                int availableThreads = Runtime.getRuntime().availableProcessors();
+                ExecutorService executor = Executors.newFixedThreadPool(availableThreads);
+
+                // 将任务分组，每个线程处理一部分
+                int taskSize = drawPositions.size();
+                int batchSize = (taskSize + availableThreads - 1) / availableThreads;//会不会漏掉一些卡片？
+                List<Future<?>> futures = new ArrayList<>();
+                for (int i = 0; i < taskSize; i += batchSize) {
+                    int start = i;
+                    int end = Math.min(i + batchSize, taskSize);
+
+                    Future<?> future = executor.submit(() -> {
+                        for (int j = start; j < end; j++) {
+                            Pair<Integer,Integer> drawPosition = drawPositions.get(j);
+                            mergeImages(output, cards.get(j).getThumbnails(), drawPosition.getFirst(), drawPosition.getSecond());
+                        }
+                    });
+
+                    futures.add(future);
+                }
+                try {
+                    for (Future<?> future : futures) {
+                        future.get();
+                    }
+                } catch (ExecutionException | InterruptedException e) {
+                    log.error("Failed to render cards parallelly.Fallback to single thread.");
+                    executor.shutdownNow();
+                    return drawByCharities(false);
+                }
+
+                executor.shutdown();
+            }
             output = resize(output, output.getWidth()/2, output.getHeight()/2);
             return output;
         }
+
+
 
         /**
          * 根据角色ID排序
          * @return
          */
-        private BufferedImage drawByCharacterId(){
-            //output = extendImage(background,4,ExtendDirection.RIGHT);
+        private BufferedImage drawByCharacterId(boolean parallel){
             cards.sort(Comparator.comparingInt(a -> a.getCardCharacters().getCharaId()));
             cards.sort((a,b)->{
                 if (a.getCardCharacters().getCharaId() == b.getCardCharacters().getCharaId()) {
@@ -295,20 +342,59 @@ public class ImageRenderer {
             for (PjskCard pjskCard : cards) {
                 countOfEachCharacter[pjskCard.getCardCharacters().getCharaId()-1]++;
             }
-            Arrays.sort(countOfEachCharacter);
-            int maxCardCount = countOfEachCharacter[25];//选取最多的一项，这里可以优化吗？不懂
+            int maxCardCount = Arrays.stream(countOfEachCharacter).max().getAsInt();//选取最多的一项
             int extendPages = maxCardCount/10;
             output = resize(background, 6500, background.getHeight() * (extendPages+1));
-            //output = extendImage(output,extendPages,ExtendDirection.DOWN);
-            short drawColumn = 0;
-            short drawRow = 0;
+            List<Pair<Integer,Integer>> drawPositions = new ArrayList<>();
+            int drawColumn = 0;
+            int drawRow = 0;
             for(int i = 0; i < cards.size(); i++){
-                mergeImages(output,cards.get(i).getThumbnails(),16 + drawColumn * 240,drawRow * 233);
+
+                if(parallel){//多线程模式获取位置，单线程模式直接渲染
+                    drawPositions.add(Pair.of(32 + drawColumn * 240,26 + drawRow * 233));
+                }else {
+                    mergeImages(output,cards.get(i).getThumbnails(),32 + drawColumn * 240,26 + drawRow * 233);
+                }
+
                 drawRow++;
                 if(i+1 != cards.size() && cards.get(i).getCardCharacters() != cards.get(i+1).getCardCharacters()){
-                    drawColumn++;
+                    drawColumn += cards.get(i+1).getCardCharacters().getCharaId() - cards.get(i).getCardCharacters().getCharaId();
+                    //如果出现某角色的卡数量为0时如何处理？这样是否可行？
                     drawRow = 0;
                 }
+            }
+            if (parallel){
+                int availableThreads = Runtime.getRuntime().availableProcessors();
+                ExecutorService executor = Executors.newFixedThreadPool(availableThreads);
+
+                // 将任务分组，每个线程处理一部分
+                int taskSize = drawPositions.size();
+                int batchSize = (taskSize + availableThreads - 1) / availableThreads;//会不会漏掉一些卡片？
+                List<Future<?>> futures = new ArrayList<>();
+
+                for (int i = 0; i < taskSize; i += batchSize) {
+                    int start = i;
+                    int end = Math.min(i + batchSize, taskSize);
+                    Future<?> future = executor.submit(() -> {
+                        for (int j = start; j < end; j++) {
+                            Pair<Integer,Integer> drawPosition = drawPositions.get(j);
+                            mergeImages(output, cards.get(j).getThumbnails(), drawPosition.getFirst(), drawPosition.getSecond());
+                        }
+                    });
+                    futures.add(future);
+                }
+
+                try {
+                    for (Future<?> future : futures) {
+                        future.get();
+                    }
+                }catch (ExecutionException | InterruptedException e) {
+                    log.error("Failed to render cards parallelly.Fallback to single thread.");
+                    executor.shutdownNow();
+                    return drawByCharacterId(false);
+                }
+                // 等待所有任务完成
+                executor.shutdown();
             }
             output = resize(output,output.getWidth()/2,output.getHeight()/2);
             return output;
@@ -318,21 +404,89 @@ public class ImageRenderer {
          * 开始绘制，阻塞时间较长
          * @return
          */
-        public BufferedImage draw(BoxDrawMethod drawMethod){
+        public BufferedImage draw(boolean parallel){
             long startMs = System.currentTimeMillis();
             BufferedImage image;
-            switch (drawMethod){
-                case RARITIES_IN_DESCEND:
-                    image = drawByCharities();
-                    break;
-                case CHARA_ID_IN_ASCEND:
-                default:
-                    image = drawByCharacterId();
-            }
+                switch (boxDrawMethod){
+                    case RARITIES_IN_DESCEND:
+                        image = drawByCharities(parallel);
+                        break;
+                    case CHARA_ID_IN_ASCEND:
+                    default:
+                        image = drawByCharacterId(parallel);
+                }
+
 
             long stopMs = System.currentTimeMillis();
             log.info("Drawing box completed.Used {} ms.",stopMs-startMs);
             return image;
+        }
+
+        public BufferedImage drawByCharaIdParallelly() throws ExecutionException, InterruptedException {
+            long startMs = System.currentTimeMillis();
+
+            List<Pair<Integer,Integer>> drawPositions = new ArrayList<>();
+            cards.sort(Comparator.comparingInt(a -> a.getCardCharacters().getCharaId()));
+            cards.sort((a,b)->{
+                if (a.getCardCharacters().getCharaId() == b.getCardCharacters().getCharaId()) {
+                    return -Integer.compare(a.getRarities().getRarity(),b.getRarities().getRarity());
+                }
+                return 0;
+            });
+            //首先按角色ID升序，再按稀有度降序
+            int[] countOfEachCharacter = new int[26];//每个角色的卡数
+            for (PjskCard pjskCard : cards) {
+                countOfEachCharacter[pjskCard.getCardCharacters().getCharaId()-1]++;
+            }
+            int maxCardCount = Arrays.stream(countOfEachCharacter).max().getAsInt();//选取最多的一项
+            int extendPages = maxCardCount/10;
+            output = resize(background, 6500, background.getHeight() * (extendPages+1));
+            int drawColumn = 0;
+            int drawRow = 0;
+            for(int i = 0; i < cards.size(); i++){
+                drawPositions.add(Pair.of(16 + drawColumn * 240,drawRow * 233));//预先计算卡位置
+                //mergeImages(output,cards.get(i).getThumbnails(),16 + drawColumn * 240,drawRow * 233);
+                drawRow++;
+                if(i+1 != cards.size() && cards.get(i).getCardCharacters() != cards.get(i+1).getCardCharacters()){
+                    drawColumn += cards.get(i+1).getCardCharacters().getCharaId() - cards.get(i).getCardCharacters().getCharaId();
+                    //如果出现某角色的卡数量为0时如何处理？这样是否可行？
+                    drawRow = 0;
+                }
+            }
+
+            int availableThreads = Runtime.getRuntime().availableProcessors();
+            ExecutorService executor = Executors.newFixedThreadPool(availableThreads);
+
+            // 将任务分组，每个线程处理一部分
+            int taskSize = drawPositions.size();
+            int batchSize = (taskSize + availableThreads - 1) / availableThreads;//会不会漏掉一些卡片？
+
+            List<Future<?>> futures = new ArrayList<>();
+
+            for (int i = 0; i < taskSize; i += batchSize) {
+                int start = i;
+                int end = Math.min(i + batchSize, taskSize);
+
+                Future<?> future = executor.submit(() -> {
+                    for (int j = start; j < end; j++) {
+                        Pair<Integer,Integer> drawPosition = drawPositions.get(j);
+                        mergeImages(output, cards.get(j).getThumbnails(), drawPosition.getFirst(), drawPosition.getSecond());
+                    }
+                });
+
+                futures.add(future);
+            }
+
+            // 等待所有任务完成
+            for (Future<?> future : futures) {
+                future.get();
+            }
+
+            executor.shutdown();
+            output = resize(output,output.getWidth()/2,output.getHeight()/2);
+            long stopMs = System.currentTimeMillis();
+            log.info("Parallelly drawing box completed.Used {} ms.",stopMs-startMs);
+            return output;
         }
 
 

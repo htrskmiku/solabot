@@ -14,6 +14,7 @@ import com.arth.bot.plugin.custom.pjsk.objects.PjskCard;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -25,6 +26,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 @Slf4j
 public final class Suite {
@@ -81,7 +86,7 @@ public final class Suite {
             }
             long stopMs = System.currentTimeMillis();
             log.info("Pjsk Box Picture rendering process: {} pictures done,Used {}ms.",counts,stopMs-startMs);
-            BufferedImage boxImage = new ImageRenderer.Box(pjskCards).draw(boxDrawMethod);//TODO:添加查box参数，优化速度（使用高性能库?）
+            BufferedImage boxImage = new ImageRenderer.Box(pjskCards,boxDrawMethod).draw(true);//TODO:添加查box参数，优化速度（使用高性能库?）
             String boxImgUuid = ctx.imageCacheService().cacheImage(boxImage);
             String boxImgUrl = ctx.apiPaths().buildPngUrl(boxImgUuid);
             if (boxImgUuid == null) {throw new InternalServerErrorException();}
@@ -101,13 +106,14 @@ public final class Suite {
         }catch (NullPointerException e){
             throw new InternalServerErrorException("Error in getting user card id");
         }catch (IOException e){
-            e.printStackTrace();
+            log.error(e.getMessage(),e);
             throw new ResourceNotFoundException("Error in getting asset bundle: cards.json not found");
         }catch (ResourceNotFoundException ignored){
             throw new InternalServerErrorException("Error in getting asset bundle: cards.json not found");
             //???
         }
     }
+
 
     // ***** ============= advanced helper ============= *****
     // ***** ============= advanced helper ============= *****
