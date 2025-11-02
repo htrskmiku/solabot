@@ -48,9 +48,6 @@ public class AssetsBundleResources {
         }
     }
 
-    public static boolean cacheExists(){
-        return false;//TODO:缓存已渲染的卡
-    }
 
 
     private static BufferedImage getThumbnailOnline(Pjsk.BeanContext ctx, String assetsbundleName, String specialTrainingStatus){

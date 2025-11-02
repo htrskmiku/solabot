@@ -86,7 +86,7 @@ public final class Suite {
             }
             long stopMs = System.currentTimeMillis();
             log.info("Pjsk Box Picture rendering process: {} pictures done,Used {}ms.",counts,stopMs-startMs);
-            BufferedImage boxImage = new ImageRenderer.Box(pjskCards,boxDrawMethod).draw(true);//TODO:添加查box参数，优化速度（使用高性能库?）
+            BufferedImage boxImage = new ImageRenderer.Box(pjskCards,boxDrawMethod).draw(true);//TODO:添加查box参数
             String boxImgUuid = ctx.imageCacheService().cacheImage(boxImage);
             String boxImgUrl = ctx.apiPaths().buildPngUrl(boxImgUuid);
             if (boxImgUuid == null) {throw new InternalServerErrorException();}
@@ -102,7 +102,6 @@ public final class Suite {
             ctx.sender().pushActionJSON(payload.getSelfId(), json);
             //log.info("Box url: {}", boxImgUrl);
             //ctx.sender().sendImage(payload,boxImgUrl);
-            //TODO:考虑是否缓存单个已渲染的卡面 注意：卡面分为Original和SpecialTraining
         }catch (NullPointerException e){
             throw new InternalServerErrorException("Error in getting user card id");
         }catch (IOException e){

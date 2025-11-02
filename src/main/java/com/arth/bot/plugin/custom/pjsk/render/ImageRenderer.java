@@ -219,13 +219,13 @@ public class ImageRenderer {
             thumbnails = resize(thumbnails,140,140);
             if(shouldDrawBoarder){
                 if (rarities.equals(CardRarities.RARITY_BIRTHDAY)){
-                    BufferedImage bufferedBoarder = ctx.imgService().deepCopy(boarder);//TODO：优化流程
+                    BufferedImage bufferedBoarder = ctx.imgService().deepCopy(boarder);
                     output = mergeImages(boarder,thumbnails,8,8);//基本框+缩略图
                     mergeImages(output,bufferedBoarder,0,0);//再覆盖一次框，生日卡的框比较特殊
                 }else {
                     output = mergeImages(boarder,thumbnails,8,8);//基本框+缩略图
                 }
-                //TODO:优化绘图流程，这里是史山
+                //TODO:优化绘图流程
             }else{
                 output = thumbnails;
             }
