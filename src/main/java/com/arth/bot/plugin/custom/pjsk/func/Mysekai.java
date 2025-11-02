@@ -20,10 +20,10 @@ public final class Mysekai {
     private Mysekai() {
     }
 
-    public static void msm(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
+    public static void msm(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload, String region) {
         long userId = payload.getUserId();
         Long groupId = payload.getGroupId();
-        PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
+        PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId, region));
 
         if (binding == null) {
             ctx.sender().replyText(payload, "数据库中没有查询到你绑定的 pjsk 账号哦");
@@ -31,7 +31,6 @@ public final class Mysekai {
         }
 
         String pjskId = binding.getPjskId();
-        String region = binding.getServerRegion();
 
         // Path file = Path.of(System.getProperty("user.dir") + "/dynamic/pjsk_user_data/mysekai/draw/map/" + "cn" + "_" + pjskId + ".png");
         Path file = findPjskFileTMP(ctx, pjskId);
@@ -65,6 +64,18 @@ public final class Mysekai {
         ctx.sender().pushActionJSON(payload.getSelfId(), json);
     }
 
+    public static void msm(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
+        long userId = payload.getUserId();
+        Long groupId = payload.getGroupId();
+        PjskBinding binding;
+        try {
+            binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
+        } catch (Exception e) {
+            ctx.sender().replyText(payload, "查询到多个服务器的绑定记录，默认国服，如果要查询其他服请在 id 后空一格加上服务器地区简写，比如 jp、tw");
+            binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId, "cn"));
+        }
+    }
+
     public static void bind(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload, List<String> args) {
         if (args.isEmpty()) {
             bound(ctx, payload);
@@ -74,9 +85,10 @@ public final class Mysekai {
         long userId = payload.getUserId();
         Long groupId = payload.getGroupId();
         String pjskId = args.get(0);
+        String region = (args.size() > 1) ? args.get(1) : "cn";
 
         // 1. 查询
-        PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
+        PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId, region));
 
         // 2. 插入或更新
         if (binding == null) {
@@ -85,29 +97,50 @@ public final class Mysekai {
             newBinding.setPjskId(pjskId);
             newBinding.setUserId(userId);
             newBinding.setGroupId(groupId);
-            newBinding.setServerRegion("cn");
+            newBinding.setServerRegion(region);
             newBinding.setCreatedAt(new Date());
             newBinding.setUpdatedAt(new Date());
             ctx.pjskBindingMapper().insert(newBinding);
-            ctx.sender().sendText(payload, "bind successfully!");
+            if ((args.size() == 1)) {
+                ctx.sender().sendText(payload, "绑定成功，默认国服，如果要绑定其他服请在 id 后空一格加上服务器地区简写，比如 jp、tw");
+            } else {
+                ctx.sender().sendText(payload, "绑定成功！");
+            }
         } else {
             // 存在记录，更新
             binding.setPjskId(pjskId);
-            binding.setServerRegion("cn");
+            binding.setServerRegion(region);
             binding.setUpdatedAt(new Date());
             ctx.pjskBindingMapper().updateById(binding);
-            ctx.sender().sendText(payload, "pjsk binding just updated");
+            if ((args.size() == 1)) {
+                ctx.sender().sendText(payload, "绑定已更新，默认国服，如果要绑定其他服请在 id 后空一格加上服务器地区简写，比如 jp、tw");
+            } else {
+                ctx.sender().sendText(payload, "绑定已更新");
+            }
         }
     }
 
     public static void bound(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
         long userId = payload.getUserId();
         Long groupId = payload.getGroupId();
-        PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
-        if (binding == null) {
-            ctx.sender().replyText(payload, "you haven't bound any pjsk id yet");
+        List<PjskBinding> bindings = ctx.pjskBindingMapper().selectList(queryBinding(userId, groupId));
+
+        if (bindings == null || bindings.isEmpty()) {
+            ctx.sender().replyText(payload, "You haven't bound any pjsk id yet");
         } else {
-            ctx.sender().replyText(payload, "your pjsk id is " + binding.getPjskId());
+            StringBuilder reply = new StringBuilder("查询到下述绑定：\n");
+
+            for (int i = 0; i < bindings.size(); i++) {
+                PjskBinding binding = bindings.get(i);
+                reply.append(i + 1)
+                        .append(". Server: ")
+                        .append(binding.getServerRegion())
+                        .append(", ID: ")
+                        .append(binding.getPjskId())
+                        .append("\n");
+            }
+
+            ctx.sender().replyText(payload, reply.toString());
         }
     }
 
@@ -127,7 +160,14 @@ public final class Mysekai {
     }
 
     private static LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId) {
-        return queryBinding(userId, groupId, "cn");
+        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(PjskBinding::getUserId, userId);
+        if (groupId == null) {
+            queryWrapper.isNull(PjskBinding::getGroupId);
+        } else {
+            queryWrapper.eq(PjskBinding::getGroupId, groupId);
+        }
+        return queryWrapper;
     }
 
     /**

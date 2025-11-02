@@ -15,6 +15,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -26,6 +27,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,16 +39,27 @@ public final class Suite {
     private Suite(){}
 
 
-    public static void box(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload,List<String> args) {
+    public static void box(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload, List<String> args) {
+        String id = null;
+        String region = (!args.isEmpty() && Set.of("cn", "tw", "jp", "en", "kr").contains(args.get(args.size() - 1))) ? args.get(args.size() - 1) : "cn";
+
         if(!ctx.devel_mode()){
             long userId = payload.getUserId();
             Long groupId = payload.getGroupId();
-            PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
+            PjskBinding binding;
+            try {
+                binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
+            } catch (Exception ignored) {
+                binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId, region));
+            }
 
             if (binding == null) {
                 ctx.sender().replyText(payload, "数据库中没有查询到你绑定的 pjsk 账号哦");
                 return;
             }
+
+            id = binding.getPjskId();
+            region = binding.getServerRegion();
         }//判断是否为开发模式
 
         ImageRenderer.Box.BoxDrawMethod boxDrawMethod = ImageRenderer.Box.BoxDrawMethod.CHARA_ID_IN_ASCEND;
@@ -63,13 +76,16 @@ public final class Suite {
 
         try {
             ctx.sender().replyText(payload,"已经收到查Box请求，正在生成图片，生成时间较长，请耐心等待");
-            RegionIdPair pair;
             JsonNode suiteData;
             if (ctx.devel_mode()){
                 suiteData = getDefaultSuite(ctx);
             }else {
-                pair = getRegionAndId(ctx, payload);
-                suiteData = requestSuite(ctx, pair.left(), pair.right());
+                try {
+                    suiteData = requestSuite(ctx, region, id);
+                } catch (ExternalServiceErrorException e) {
+                    ctx.sender().replyText(payload, "向 hrk 请求数据失败，可能还没有在 hrk 上传过 suite");
+                    return;
+                }
             }
             JsonNode userCardsNode = suiteData.get("userCards");
             ArrayList<PjskCard> pjskCards = new ArrayList<>();
@@ -114,23 +130,6 @@ public final class Suite {
     }
 
 
-    // ***** ============= advanced helper ============= *****
-    // ***** ============= advanced helper ============= *****
-    // ***** ============= advanced helper ============= *****
-
-
-    private static RegionIdPair getRegionAndId(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload) {
-        RegionIdPair pair = new RegionIdPair();
-        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PjskBinding::getUserId, payload.getUserId())
-                .eq(PjskBinding::getGroupId, payload.getGroupId());
-        PjskBinding binding = ctx.pjskBindingMapper().selectOne(queryWrapper);
-        if (binding == null) throw new ResourceNotFoundException("user's pjsk binding data not found");
-        pair.setLeft(binding.getServerRegion());
-        pair.setRight(binding.getPjskId());
-        return pair;
-    }
-
     // ***** ======== FOR OFFLINE MODE ONLY ============ *****
     // ***** ======== FOR OFFLINE MODE ONLY ============ *****
 
@@ -163,7 +162,14 @@ public final class Suite {
     }
 
     private static LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId) {
-        return queryBinding(userId, groupId, "cn");
+        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(PjskBinding::getUserId, userId);
+        if (groupId == null) {
+            queryWrapper.isNull(PjskBinding::getGroupId);
+        } else {
+            queryWrapper.eq(PjskBinding::getGroupId, groupId);
+        }
+        return queryWrapper;
     }
 
 
@@ -222,6 +228,9 @@ public final class Suite {
                     .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
+                    .onStatus(status -> status == HttpStatus.NOT_FOUND, response ->
+                            Mono.error(new ExternalServiceErrorException("status:404, account binding not found"))
+                    )
                     .onStatus(HttpStatusCode::isError, response ->
                             response.bodyToMono(String.class)
                                     .flatMap(body -> Mono.error(new IOException(
@@ -230,9 +239,7 @@ public final class Suite {
                     .bodyToMono(String.class)
                     .timeout(Duration.ofSeconds(30))
                     .block();
-            if (responseBody == null) {
-                throw new IOException("Empty response body for URL: " + url);
-            }
+            if (responseBody == null) throw new IOException("Empty response body for URL: " + url);
             return ctx.objectMapper().readTree(responseBody);
         } catch (Exception e) {
             throw new ExternalServiceErrorException("Failed to request URL: " + url, e.getMessage());

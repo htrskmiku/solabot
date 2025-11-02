@@ -14,7 +14,7 @@ VALUES
     ('7445607211377793833', 3468684112, 619096416, 'cn', NOW(), NOW()),
     ('123', 1093664084, 619096416, 'cn', NOW(), NOW()),
     ('123', 1093664084, 793709714, 'cn', NOW(), NOW())
-    ON CONFLICT (pjsk_id, user_id, group_id)
+    ON CONFLICT (pjsk_id, user_id, server_region)
 DO NOTHING;
 
 -- 初始化 t_streamer_alias 表数据

@@ -8,7 +8,7 @@ create table if not exists t_pjsk_binding
     server_region CHAR(2)     NOT NULL CHECK (server_region IN ('cn', 'jp', 'tw', 'kr', 'en', 'xx')),
     created_at    timestamptz default now(),
     updated_at    timestamptz default now(),
-    unique (pjsk_id, user_id, group_id)
+    unique (pjsk_id, user_id, server_region)
 );
 create index if not exists idx_pjsk_binding_pjsk on t_pjsk_binding (pjsk_id);
 create index if not exists idx_pjsk_binding_user on t_pjsk_binding (user_id);
