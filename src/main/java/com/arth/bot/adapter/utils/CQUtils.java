@@ -1,4 +1,4 @@
-package com.arth.bot.adapter.util;
+package com.arth.bot.adapter.utils;
 
 import java.util.*;
 import java.util.regex.*;

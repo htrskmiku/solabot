@@ -2,17 +2,23 @@
 create table if not exists t_pjsk_binding
 (
     id            bigserial   primary key,
-    pjsk_id       varchar(64) not null,
     user_id       bigint      not null,
-    group_id      bigint,
-    server_region CHAR(2)     NOT NULL CHECK (server_region IN ('cn', 'jp', 'tw', 'kr', 'en', 'xx')),
+    cn_pjsk_id    varchar(64),
+    jp_pjsk_id    varchar(64),
+    tw_pjsk_id    varchar(64),
+    kr_pjsk_id    varchar(64),
+    en_pjsk_id    varchar(64),
+    default_server_region CHAR(2)     NOT NULL CHECK (default_server_region IN ('cn', 'jp', 'tw', 'kr', 'en')),
     created_at    timestamptz default now(),
     updated_at    timestamptz default now(),
-    unique (pjsk_id, user_id, server_region)
+    unique (user_id)
 );
-create index if not exists idx_pjsk_binding_pjsk on t_pjsk_binding (pjsk_id);
 create index if not exists idx_pjsk_binding_user on t_pjsk_binding (user_id);
-create index if not exists idx_pjsk_binding_group on t_pjsk_binding (group_id);
+create index if not exists idx_pjsk_binding_pjsk on t_pjsk_binding (cn_pjsk_id);
+create index if not exists idx_pjsk_binding_pjsk on t_pjsk_binding (jp_pjsk_id);
+create index if not exists idx_pjsk_binding_pjsk on t_pjsk_binding (tw_pjsk_id);
+create index if not exists idx_pjsk_binding_pjsk on t_pjsk_binding (kr_pjsk_id);
+create index if not exists idx_pjsk_binding_pjsk on t_pjsk_binding (en_pjsk_id);
 
 -- Live 主播别名映射表
 create table if not exists t_streamer_alias

@@ -3,7 +3,7 @@ package com.arth.bot.adapter.controller.websocket;
 import com.arth.bot.adapter.fetcher.websocket.EchoWaiter;
 import com.arth.bot.adapter.parser.PayloadParser;
 import com.arth.bot.adapter.io.SessionRegistry;
-import com.arth.bot.adapter.util.LogUtils;
+import com.arth.bot.adapter.utils.LogUtils;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.BusinessException;
 import com.arth.bot.core.invoker.CommandInvoker;
