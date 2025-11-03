@@ -2,7 +2,10 @@ package com.arth.bot.adapter.controller.http;
 
 import com.arth.bot.adapter.controller.ApiPaths;
 import com.arth.bot.adapter.utils.NetworkUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -10,33 +13,22 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @RestController
+@RequiredArgsConstructor
 public class PjskController {
 
-    private final Path BASE_DIR;
     private final ResourceLoader resourceLoader;
     private final WebClient webClient;
-
-    @Autowired
-    private PjskController(
-            @Value("${app.local-path.pjsk-resource.dynamic.mysekai.root}") String rootPath,
-            ResourceLoader resourceLoader,
-            WebClient webClient
-    ) {
-        BASE_DIR = Path.of(rootPath).toAbsolutePath().normalize();
-        this.resourceLoader = resourceLoader;
-        this.webClient = webClient;
-    }
+    private final ObjectMapper objectMapper;
 
     /**
      * Mysekai 透视 map 请求
@@ -87,41 +79,66 @@ public class PjskController {
         }
     }
 
+//    /**
+//     * 获取转发脚本的请求
+//     *
+//     * @param request
+//     * @return
+//     * @throws IOException
+//     */
+//    @GetMapping(ApiPaths.PJSK_UPLOAD_JS)
+//    public ResponseEntity<Resource> getUploadJs(HttpServletRequest request) throws IOException {
+//        try {
+//            Resource resource = resourceLoader.getResource("classpath:static/pjsk/proxy_software_module/script.js");
+//
+//            if (!resource.exists()) return ResponseEntity.notFound().build();
+//
+//            return ResponseEntity.ok()
+//                    .contentType(MediaType.parseMediaType("text/plain; charset=utf-8"))
+//                    .header("Content-Disposition", "inline; filename=\"script.js\"")
+//                    .body(resource);
+//
+//        } catch (Exception e) {
+//            return ResponseEntity.internalServerError().build();
+//        }
+//    }
+
     /**
-     * 获取转发脚本的请求（暂时的实现是原封不动地转发给 python 程序处理）
+     * 模块重定向至此处，后端负责向游戏服务器请求数据
      *
      * @param request
+     * @param original
      * @return
      * @throws IOException
      */
-    @GetMapping(ApiPaths.PJSK_UPLOAD_JS)
-    public ResponseEntity<Resource> getUploadJs(HttpServletRequest request) throws IOException {
-        try {
-            Resource resource = resourceLoader.getResource("classpath:static/pjsk/proxy_software_module/script.js");
-
-            if (!resource.exists()) return ResponseEntity.notFound().build();
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("text/plain; charset=utf-8"))
-                    .header("Content-Disposition", "inline; filename=\"script.js\"")
-                    .body(resource);
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    /**
-     * 处理转发数据（暂时的实现是原封不动地转发给 python 程序处理）
-     *
-     * @param request
-     * @return
-     * @throws IOException
-     */
-    @PostMapping(ApiPaths.PJSK_UPLOAD)
-    public ResponseEntity<Resource> upload(HttpServletRequest request) throws IOException {
+    @RequestMapping(path = ApiPaths.MYSEKAI_UPLOAD_PROXY, method = {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<Resource> proxyUpload(
+            HttpServletRequest request,
+            @RequestParam("original") String original,
+            @RequestParam("user") String user,
+            @RequestParam("force") String force
+    ) throws IOException {
+        log.debug("[adapter.http] received mysekai proxy request: {}", NetworkUtils.getRequestInfoStr(objectMapper, request));
         byte[] body = NetworkUtils.readBody(request);
-        return NetworkUtils.proxyRequest(webClient, "http://localhost:8849/upload", request, body);
+        String targetUrl = original.replace("{user}", user).replace("{force}", force);
+        ResponseEntity<Resource> response = NetworkUtils.proxyRequest(webClient, targetUrl, request, body);
+        log.debug("[adapter.http] proxied successfully");
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                webClient.post()
+                        .uri("http://localhost:8849/upload")
+                        .contentType(response.getHeaders().getContentType())
+                        .bodyValue(body)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .block();
+            } catch (Exception e) {
+                log.error("[adapter.http] async request failed: " + e.getMessage());
+            }
+        });
+
+        return response;
     }
 
 
@@ -145,11 +162,11 @@ public class PjskController {
             return ResponseEntity.badRequest().build();
         }
 
-        Path subDir = BASE_DIR.resolve(type).normalize();
+        Path subDir = ApiPaths.mysekaiResrouceBaseDir.resolve(type).normalize();
         Path file = subDir.resolve(region + "_" + id + ".png").normalize();
 
         // 403: 确保最终路径仍在 BASE_DIR 下，避免目录遍历攻击
-        if (!file.startsWith(BASE_DIR)) return ResponseEntity.status(403).build();
+        if (!file.startsWith(ApiPaths.mysekaiResrouceBaseDir)) return ResponseEntity.status(403).build();
 
         // 404
         if (!Files.exists(file) || !Files.isRegularFile(file)) return ResponseEntity.notFound().build();

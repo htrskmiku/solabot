@@ -3,11 +3,15 @@ package com.arth.bot.adapter.controller;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.Path;
+
 @Component
 public class ApiPaths {
 
-    @Value("${app.client-access-network-endpoint}")
-    String networkEndpoint;
+    @Value("${app.client-access-network-endpoint}") String networkEndpoint;
+
+    @Value("${app.local-path.pjsk-resource.dynamic.mysekai.root}") String rootPath;
+    public static Path mysekaiResrouceBaseDir;
 
     public static String DOMIN_NAME = "yly.dylancloud.uk";
 
@@ -39,6 +43,7 @@ public class ApiPaths {
     public static final String PJSK_UPLOAD_JS = "/upload.js";
     public static final String PJSK_UPLOAD = "/upload";
     public static final String SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN = "/api/v1/pjsk/module/cn/mysekai";
+    public static final String MYSEKAI_UPLOAD_PROXY = "/api/v1/pjsk/upload/mysekai";
 
     public String buildMysekaiMapUrl(String region, String id) {
         return networkEndpoint + "/api/v1/pjsk/resource/" + region + "/mysekai/" + id + "/map";
@@ -50,5 +55,15 @@ public class ApiPaths {
 
     public String getShadowrocketModuleDownloadMysekaiCn() {
         return DOMIN_NAME + SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN;
+    }
+
+    /*
+      local path
+     */
+    public Path getMysekaiResourceBaseDir() {
+        if (mysekaiResrouceBaseDir == null) {
+            mysekaiResrouceBaseDir = Path.of(rootPath).toAbsolutePath().normalize();
+        }
+        return mysekaiResrouceBaseDir;
     }
 }

@@ -3,7 +3,7 @@ server:
   port: 8848
 
 app:
-  client-access-network-endpoint: "http://192.168.50.213:8848"
+  client-access-network-endpoint: "http://localhost:8848"
 
   local-path:
     pjsk-resource:

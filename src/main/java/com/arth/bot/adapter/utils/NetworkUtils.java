@@ -1,5 +1,7 @@
 package com.arth.bot.adapter.utils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -12,10 +14,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 public class NetworkUtils {
@@ -97,6 +96,38 @@ public class NetworkUtils {
     public static byte[] readBody(HttpServletRequest request) throws IOException {
         try (InputStream inputStream = request.getInputStream()) {
             return inputStream.readAllBytes();
+        }
+    }
+
+    public static String getRequestInfoStr(ObjectMapper objectMapper, HttpServletRequest request) {
+        Map<String, Object> requestInfo = new LinkedHashMap<>();
+
+        // 基本信息
+        requestInfo.put("method", request.getMethod());
+        requestInfo.put("url", request.getRequestURL().toString());
+        requestInfo.put("uri", request.getRequestURI());
+        requestInfo.put("queryString", request.getQueryString());
+        requestInfo.put("remoteAddr", request.getRemoteAddr());
+        requestInfo.put("contentType", request.getContentType());
+
+        // 参数
+        requestInfo.put("parameters", request.getParameterMap());
+
+        // header
+        Map<String, String> simpleHeaders = new LinkedHashMap<>();
+        Enumeration<String> headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String name = headerNames.nextElement();
+            simpleHeaders.put(name, request.getHeader(name));
+        }
+        requestInfo.put("headers", simpleHeaders);
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestInfo);
+        } catch (Exception e) {
+            return "Error serializing request info: " + e.getMessage();
         }
     }
 }
