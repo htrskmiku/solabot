@@ -98,8 +98,19 @@ public class PjskController {
      */
     @GetMapping(ApiPaths.PJSK_UPLOAD_JS)
     public ResponseEntity<Resource> getUploadJs(HttpServletRequest request) throws IOException {
-        byte[] body = NetworkUtils.readBody(request);
-        return NetworkUtils.proxyRequest(webClient, "http://localhost:8849/upload.js", request, body);
+        try {
+            Resource resource = resourceLoader.getResource("classpath:static/pjsk/proxy_software_module/script.js");
+
+            if (!resource.exists()) return ResponseEntity.notFound().build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("text/plain; charset=utf-8"))
+                    .header("Content-Disposition", "inline; filename=\"script.js\"")
+                    .body(resource);
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**
