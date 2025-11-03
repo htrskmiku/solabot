@@ -1,7 +1,7 @@
 package com.arth.bot.adapter.controller.http;
 
 import com.arth.bot.adapter.controller.ApiPaths;
-import com.arth.bot.adapter.util.NetworkUtils;
+import com.arth.bot.adapter.utils.NetworkUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

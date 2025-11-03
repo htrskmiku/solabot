@@ -2,7 +2,7 @@ package com.arth.bot.adapter.fetcher.websocket.impl;
 
 import com.arth.bot.adapter.fetcher.websocket.ReplyFetcher;
 import com.arth.bot.adapter.sender.Sender;
-import com.arth.bot.adapter.util.CQUtils;
+import com.arth.bot.adapter.utils.CQUtils;
 import com.arth.bot.core.common.dto.ReplayedMessagePayloadDTO;
 import com.arth.bot.core.common.dto.replay.*;
 import com.fasterxml.jackson.databind.JsonNode;

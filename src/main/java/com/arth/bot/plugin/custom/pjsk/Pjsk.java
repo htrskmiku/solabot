@@ -10,6 +10,7 @@ import com.arth.bot.core.invoker.annotation.BotCommand;
 import com.arth.bot.core.invoker.annotation.BotPlugin;
 import com.arth.bot.core.database.mapper.PjskBindingMapper;
 import com.arth.bot.plugin.custom.Plugin;
+import com.arth.bot.plugin.custom.pjsk.func.General;
 import com.arth.bot.plugin.custom.pjsk.func.Mysekai;
 import com.arth.bot.plugin.custom.pjsk.func.Suite;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,6 +45,23 @@ public class Pjsk extends Plugin {
         sender.replyText(payload, helpText);
     }
 
+    // ***** ============= General ============= *****
+
+    @BotCommand({"绑定", "bind"})
+    public void bind(ParsedPayloadDTO payload, List<String> args) {
+        General.bind(getCtx(), payload, args);
+    }
+
+    @BotCommand({"查询绑定", "bound"})
+    public void bound(ParsedPayloadDTO payload) {
+        General.bound(getCtx(), payload);
+    }
+
+    @BotCommand(("默认服务器"))
+    public void setDefaultServerRegion(ParsedPayloadDTO payload, List<String> args) {
+        General.setDefaultServerRegion(getCtx(), payload, args);
+    }
+
     // ***** ============= Suite ============= *****
 
     @BotCommand({"box", "卡牌一览"})
@@ -54,16 +72,6 @@ public class Pjsk extends Plugin {
 
 
     // ***** ============= Mysekai ============= *****
-
-    @BotCommand({"绑定", "bind"})
-    public void bind(ParsedPayloadDTO payload, List<String> args) {
-        Mysekai.bind(getCtx(), payload, args);
-    }
-
-    @BotCommand({"查询绑定", "bound"})
-    public void bound(ParsedPayloadDTO payload) {
-        Mysekai.bound(getCtx(), payload);
-    }
 
     @BotCommand({"msm", "msr"})
     public void msm(ParsedPayloadDTO payload) {
