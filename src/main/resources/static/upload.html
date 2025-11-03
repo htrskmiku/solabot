@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solabot 文件上传</title>
+    
+	<link href="css/ai.css" rel="stylesheet" type="text/css" />
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="windowBody">
+        <div class="windowMain">
+            <h1 class="labelHead">Solabot PJSK文件上传</h1>
+            <div class="dataTypeDiv">
+                <p style="font-size: 15px;font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">选择文件类型</p>
+                <select class="dataTypeSelector" id="dataTypeSelector">
+                    <option value="suite">Suite</option>
+                    <option value="mysekai">mySekai</option>
+                </select>
+                <button class="selectFile" id="selectFile">选择文件</button>
+                <input type="file" name="file" id="file" style="width: 0;height: 0;">
+            </div>
+            <div class="regionSelection">
+                <label >选择区服：</label>
+                <input type="radio" id="regionSelection1" name="region" value="cn" checked="checked"/>
+                <label for="regionSelection1">国服</label>
+                <input type="radio" id="regionSelection2" name="region" value="jp" />
+                <label for="regionSelection2">日服</label>
+                <input type="radio" id="regionSelection3" name="region" value="tw" />
+                <label for="regionSelection3">台服</label>
+            </div>
+            <button class="submitFile" id="submit">上传文件</button>
+        </div>
+
+    </div>
+</body>
+<script src="js/upload.js"></script>
+<script src="js/toast.js"></script>
+</html>

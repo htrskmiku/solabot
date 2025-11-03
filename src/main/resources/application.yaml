@@ -88,6 +88,11 @@ spring:
 
   task-scheduler-pool-size: 1
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
