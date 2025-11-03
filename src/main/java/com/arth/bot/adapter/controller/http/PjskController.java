@@ -1,7 +1,7 @@
 package com.arth.bot.adapter.controller.http;
 
 import com.arth.bot.adapter.controller.ApiPaths;
-import com.arth.bot.adapter.util.NetworkUtils;
+import com.arth.bot.adapter.utils.NetworkUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -96,8 +96,19 @@ public class PjskController {
      */
     @GetMapping(ApiPaths.PJSK_UPLOAD_JS)
     public ResponseEntity<Resource> getUploadJs(HttpServletRequest request) throws IOException {
-        byte[] body = NetworkUtils.readBody(request);
-        return NetworkUtils.proxyRequest(webClient, "http://localhost:8849/upload.js", request, body);
+        try {
+            Resource resource = resourceLoader.getResource("classpath:static/pjsk/proxy_software_module/script.js");
+
+            if (!resource.exists()) return ResponseEntity.notFound().build();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("text/plain; charset=utf-8"))
+                    .header("Content-Disposition", "inline; filename=\"script.js\"")
+                    .body(resource);
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**

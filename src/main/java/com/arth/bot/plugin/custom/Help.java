@@ -35,7 +35,8 @@ public class Help extends Plugin {
                         pjsk 啤酒烧烤模块目前支持以下命令：
                           - 绑定 <pjsk id> <可选 cn/tw/jp>: 绑定 pjsk 账号，默认国服
                           - 绑定 / 查询绑定: 查看 pjsk 账号的绑定
-                          - msm <可选 cn/tw/jp>: 查看所绑定的 mysekai 数据
+                          - 默认服务器 <cn/tw/jp>：切换默认服务器
+                          - msm <可选 cn/tw/jp>: 查看所绑定的 mysekai 数据，默认国服
                           - box <-r> <可选 cn/tw/jp>: 查询 box，已实装，半成品，不加参数为按角色排序，-r参数为按稀有度降序排列，默认国服
                           - luna茶的组卡器，尚未实装"""));
 
@@ -44,7 +45,7 @@ public class Help extends Plugin {
                             我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                             👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服+为例（需要其他服的模块可联系我）：在 配置→模块→右上角➕︎号，填入下面这个地址："""))
-                    .addCustomNode(payload.getSelfId(), "bot", n -> n.text(ApiPaths.SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN))
+                    .addCustomNode(payload.getSelfId(), "bot", n -> n.text(apiPaths.getShadowrocketModuleDownloadMysekaiCn()))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                             模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块替换为我们的"""));
         } else {

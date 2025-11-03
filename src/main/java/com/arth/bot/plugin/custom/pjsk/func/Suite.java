@@ -9,12 +9,9 @@ import com.arth.bot.core.database.domain.PjskBinding;
 import com.arth.bot.plugin.custom.pjsk.Pjsk;
 import com.arth.bot.plugin.custom.pjsk.render.ImageRenderer;
 import com.arth.bot.plugin.custom.pjsk.objects.PjskCardInfo;
-import com.arth.bot.plugin.custom.pjsk.utils.pair.RegionIdPair;
 import com.arth.bot.plugin.custom.pjsk.objects.PjskCard;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -41,25 +38,24 @@ public final class Suite {
 
     public static void box(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload, List<String> args) {
         String id = null;
-        String region = (!args.isEmpty() && Set.of("cn", "tw", "jp", "en", "kr").contains(args.get(args.size() - 1))) ? args.get(args.size() - 1) : "cn";
+        String region = null;
 
         if(!ctx.devel_mode()){
             long userId = payload.getUserId();
             Long groupId = payload.getGroupId();
-            PjskBinding binding;
-            try {
-                binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId));
-            } catch (Exception ignored) {
-                binding = ctx.pjskBindingMapper().selectOne(queryBinding(userId, groupId, region));
-            }
 
-            if (binding == null) {
+            try {
+                General.IdRegionPair pair = getIdRegionFromArgs(ctx, userId, args);
+                if (pair == null) {
+                    ctx.sender().replyText(payload, "没有查询到指定region所绑定的游戏id");
+                    return;
+                }
+                id = pair.pjskId();
+                region = pair.region();
+            } catch (ResourceNotFoundException e) {
                 ctx.sender().replyText(payload, "数据库中没有查询到你绑定的 pjsk 账号哦");
                 return;
             }
-
-            id = binding.getPjskId();
-            region = binding.getServerRegion();
         }//判断是否为开发模式
 
         ImageRenderer.Box.BoxDrawMethod boxDrawMethod = ImageRenderer.Box.BoxDrawMethod.CHARA_ID_IN_ASCEND;
@@ -150,28 +146,23 @@ public final class Suite {
     // ***** ============= account query  ============= *****
     // ***** ============= account query  ============= *****
 
-    private static LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId, String serverRegion) {
-        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PjskBinding::getUserId, userId).eq(PjskBinding::getServerRegion, serverRegion);
-        if (groupId == null) {
-            queryWrapper.isNull(PjskBinding::getGroupId);
-        } else {
-            queryWrapper.eq(PjskBinding::getGroupId, groupId);
-        }
-        return queryWrapper;
-    }
+    private static General.IdRegionPair getIdRegionFromArgs(Pjsk.CoreBeanContext ctx, long userId, List<String> args) throws ResourceNotFoundException {
+        PjskBinding binding = General.queryBinding(ctx, userId);
 
-    private static LambdaQueryWrapper<PjskBinding> queryBinding(long userId, Long groupId) {
-        LambdaQueryWrapper<PjskBinding> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(PjskBinding::getUserId, userId);
-        if (groupId == null) {
-            queryWrapper.isNull(PjskBinding::getGroupId);
+        String region;
+        if (args == null || args.isEmpty() || !General.isRegionValid(args.get(args.size() - 1))) {
+            region = binding.getDefaultServerRegion();
         } else {
-            queryWrapper.eq(PjskBinding::getGroupId, groupId);
+            region = args.get(args.size() - 1);
         }
-        return queryWrapper;
-    }
 
+        String pjskId = General.queryPjskIdByRegion(ctx, binding, region);
+        if (pjskId == null) {
+            return null;
+        } else {
+            return new General.IdRegionPair(pjskId, region);
+        }
+    }
 
     // ***** ============= request helper ============= *****
     // ***** ============= request helper ============= *****

@@ -1,20 +1,18 @@
 -- 初始化 t_pjsk_binding 表数据
-INSERT INTO t_pjsk_binding (pjsk_id, user_id, group_id, server_region, created_at, updated_at)
+INSERT INTO t_pjsk_binding (user_id, cn_pjsk_id, jp_pjsk_id, tw_pjsk_id, kr_pjsk_id, en_pjsk_id, default_server_region, created_at, updated_at)
 VALUES
-    ('7485938033569569588', 1256977415, 619096416, 'cn', NOW(), NOW()),
-    ('7445096955522390818', 1685280357, 619096416, 'cn', NOW(), NOW()),
-    ('7487212719486049063', 1828209434, 619096416, 'cn', NOW(), NOW()),
-    ('7486314772426939173', 984097301, 619096416, 'cn', NOW(), NOW()),
-    ('7489244575534537481', 1461762986, 619096416, 'cn', NOW(), NOW()),
-    ('7485918807991769867', 1935545201, 619096416, 'cn', NOW(), NOW()),
-    ('7485918807991769867', 1935545201, 992406250, 'cn', NOW(), NOW()),
-    ('7503172168113658687', 2462516428, 619096416, 'cn', NOW(), NOW()),
-    ('7485918725925935911', 2660564229, 619096416, 'cn', NOW(), NOW()),
-    ('7486453954226772745', 1355343505, 619096416, 'cn', NOW(), NOW()),
-    ('7445607211377793833', 3468684112, 619096416, 'cn', NOW(), NOW()),
-    ('123', 1093664084, 619096416, 'cn', NOW(), NOW()),
-    ('123', 1093664084, 793709714, 'cn', NOW(), NOW())
-    ON CONFLICT (pjsk_id, user_id, server_region)
+    (1256977415, '7485938033569569588', null, null, null, null, 'cn', NOW(), NOW()),
+    (1685280357, '7445096955522390818', null, null, null, null, 'cn', NOW(), NOW()),
+    (1828209434, '7487212719486049063', null, null, null, null, 'cn', NOW(), NOW()),
+    (984097301,  '7486314772426939173', null, null, null, null, 'cn', NOW(), NOW()),
+    (1461762986, '7489244575534537481', null, null, null, null, 'cn', NOW(), NOW()),
+    (1935545201, '7485918807991769867', null, null, null, null, 'cn', NOW(), NOW()),
+    (1935545201, '7485918807991769867', null, null, null, null, 'cn', NOW(), NOW()),
+    (2462516428, '7503172168113658687', null, null, null, null, 'cn', NOW(), NOW()),
+    (2660564229, '7485918725925935911', null, null, null, null, 'cn', NOW(), NOW()),
+    (1355343505, '7486453954226772745', null, null, null, null, 'cn', NOW(), NOW()),
+    (3468684112, '7445607211377793833', null, null, null, null, 'cn', NOW(), NOW())
+    ON CONFLICT (user_id)
 DO NOTHING;
 
 -- 初始化 t_streamer_alias 表数据

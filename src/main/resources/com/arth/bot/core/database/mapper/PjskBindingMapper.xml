@@ -6,16 +6,19 @@
 
     <resultMap id="BaseResultMap" type="com.arth.bot.core.database.domain.PjskBinding">
             <id property="id" column="id" jdbcType="BIGINT"/>
-            <result property="pjskId" column="pjsk_id" jdbcType="VARCHAR"/>
             <result property="userId" column="user_id" jdbcType="BIGINT"/>
-            <result property="groupId" column="group_id" jdbcType="BIGINT"/>
-            <result property="serverRegion" column="server_region" jdbcType="CHAR"/>
+            <result property="cnPjskId" column="cn_pjsk_id" jdbcType="VARCHAR"/>
+            <result property="jpPjskId" column="jp_pjsk_id" jdbcType="VARCHAR"/>
+            <result property="twPjskId" column="tw_pjsk_id" jdbcType="VARCHAR"/>
+            <result property="krPjskId" column="kr_pjsk_id" jdbcType="VARCHAR"/>
+            <result property="enPjskId" column="en_pjsk_id" jdbcType="VARCHAR"/>
+            <result property="defaultServerRegion" column="default_server_region" jdbcType="CHAR"/>
             <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
             <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,pjsk_id,user_id,group_id,server_region,created_at,
-        updated_at
+        id,user_id,cn_pjsk_id,jp_pjsk_id,tw_pjsk_id,kr_pjsk_id,
+        en_pjsk_id,default_server_region,created_at,updated_at
     </sql>
 </mapper>
