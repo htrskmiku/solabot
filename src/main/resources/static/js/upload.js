@@ -1,66 +1,67 @@
 
-    document.addEventListener('DOMContentLoaded', function() {
-    const fileInput = document.getElementById('fileInput');
-    const fileUploadArea = document.getElementById('fileUploadArea');
-    const selectedFile = document.getElementById('selectedFile');
-    const fileName = document.getElementById('fileName');
-    const fileSize = document.getElementById('fileSize');
-    const removeFile = document.getElementById('removeFile');
-    const uploadButton = document.getElementById('uploadButton');
+document.addEventListener("DOMContentLoaded",()=>{
+    var buttonSelectFile = document.getElementById("selectFile")
+    var selectFile = document.getElementById("file")
+    var dataTypeSelector = document.getElementById("dataTypeSelector")
+    var submitFile = document.getElementById("submit")
+    var regions = document.getElementsByName("region")
+    var pjskRegion = ""
+    var filePath;
 
-    // 文件选择处理
-    fileInput.addEventListener('change', function(e) {
-    if (this.files && this.files[0]) {
-    const file = this.files[0];
-    displayFileInfo(file);
-}
-});
+    buttonSelectFile.addEventListener("click",(event)=>{
+        selectFile.click()
+    })
 
-    // 拖拽功能
-    fileUploadArea.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    this.classList.add('dragover');
-});
+    selectFile.addEventListener("change",(event)=>{
+        if(selectFile.files[0] !== undefined){
+            buttonSelectFile.innerText = "已选择：" + selectFile.files[0].name
+        }
+    })
 
-    fileUploadArea.addEventListener('dragleave', function() {
-    this.classList.remove('dragover');
-});
+    submitFile.addEventListener("click",(event)=>{
+        filePath = selectFile.files[0]
+        regions.forEach(region=>{
+            if(region.checked){
+                pjskRegion = region.value
+            }
+        })
+        if(filePath === undefined){
+            showCustomToast('error', '错误', '请选择一个数据文件', 4000);
+            return;
+        }
+        uploadFile(filePath)
+    })
+    function uploadFile(filePath){
+        try {
+            var formData = new FormData();
+            formData.append("file", filePath)
+            formData.append("filetype", dataTypeSelector.value)
+            formData.append("region", pjskRegion)
+            fetch("/api/upload", {
+                method: "POST",
+                body: formData,
+            }).then((response) => {
+                response.json().then(data => {
+                    response = JSON.parse(data)
+                    if(response.success){
+                        showCustomToast('success', '上传成功', '资料上传成功！快去群里试试吧', 4000);
+                    }else {
+                        showCustomToast('error', '出现错误', '出现错误，请联系管理员.' + response.errormsg, 4000);
+                    }
+                })
+            })
+            selectFile.clear()
+            buttonSelectFile.innerText = "选择文件"
+        }catch(err){
+            showCustomToast('error', '出现错误', '出现错误，请联系管理员.' + err, 4000);
+            buttonSelectFile.innerText = "选择文件"
+        }
 
-    fileUploadArea.addEventListener('drop', function(e) {
-    e.preventDefault();
-    this.classList.remove('dragover');
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-    fileInput.files = e.dataTransfer.files;
-    displayFileInfo(e.dataTransfer.files[0]);
-}
-});
-
-    // 移除文件
-    removeFile.addEventListener('click', function() {
-    fileInput.value = '';
-    selectedFile.style.display = 'none';
-    uploadButton.disabled = true;
-});
-
-    // 显示文件信息
-    function displayFileInfo(file) {
-    fileName.textContent = file.name;
-    fileSize.textContent = formatFileSize(file.size);
-    selectedFile.style.display = 'flex';
-    uploadButton.disabled = false;
-}
-
-    // 格式化文件大小
-    function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-});
-
+    }
+})
+window.addEventListener("load", (event)=>{
+    setTimeout(()=>{
+        showCustomToast('info', '欢迎使用', '上传你的啤酒烧烤数据吧', 4000);
+    },500)
+})
 

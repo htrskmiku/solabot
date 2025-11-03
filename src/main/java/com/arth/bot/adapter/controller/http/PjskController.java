@@ -2,7 +2,10 @@ package com.arth.bot.adapter.controller.http;
 
 import com.arth.bot.adapter.controller.ApiPaths;
 import com.arth.bot.adapter.utils.NetworkUtils;
+import com.arth.bot.plugin.custom.pjsk.utils.Decryptor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -10,16 +13,15 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+@Slf4j
 @RestController
 public class PjskController {
 
@@ -113,7 +115,25 @@ public class PjskController {
         return NetworkUtils.proxyRequest(webClient, "http://localhost:8849/upload", request, body);
     }
 
-    
+    @PostMapping( ApiPaths.PJSK_WEB_UPLOAD)
+    public String upload(@RequestParam("file") MultipartFile file,@RequestParam("filetype") String filetype,@RequestParam("region") String region) throws IOException {
+        byte[] body = file.getBytes();
+        switch (filetype) {
+            case "mysekai":
+                break;
+            case "suite":
+                break;
+        }
+        return "1234";
+    }//TODO:与前端对接
+    /*
+        前端返回格式：MultipartFile file（文件）  String filetype（文件类型，suite或mysekai）   String region（游戏区服）
+        后端返回格式(JSON)：
+        {
+          "success" : 布尔值,
+          "errormsg" : 字符串，错误信息
+        }
+     */
 
 
     // **============  helper  ============**

@@ -1,16 +1,23 @@
 
-
 body{
-    background-image: url("../test/saki.jpg");
     #background-color: #39C5BB;
+}
+html{
+    background-image: url("../test/saki.jpg");
+    backdrop-filter:blur(10px);
 }
 .windowBody{
     display:grid;
     place-items:center;
     height:100vh;
+    backdrop-filter:blur(10px);
+    border-radius: 10px;
+    transition: ease-in-out 250ms;
+}
+.windowBody:hover{
+    backdrop-filter:blur(0px);
 }
 .windowMain{
-    backdrop-filter: blur(20px);
     place-items:center;
     text-align:center;
     background-color: white;
@@ -41,6 +48,21 @@ select.dataTypeSelector{
 /*    opacity: 1;*/
 /*    font-size:15px;*/
 /*}*/
+.selectFile{
+    background-color: aqua;
+    border-color: transparent;
+    margin-left: 15px;
+    margin-top: 14px;
+    width: 100px;
+    height: 30px;
+    border-radius: 30px;
+}
+.selectFile:hover{
+    background-color: #00bbff;
+}
+.selectFile:active{
+    background-color: #006fff;
+}
 .fileInput {
     margin-left: 10px;
     display: inline-block;
@@ -52,4 +74,22 @@ select.dataTypeSelector{
     font-weight: 30;
     cursor: pointer;
     transition: all 0.3s ease;
+}
+.submitFile{
+    background-color: aqua;
+    border-color: transparent;
+    width: 100px;
+    height: 30px;
+    border-radius: 30px;
+    margin-top: 20px;
+}
+.submitFile:hover{
+    background-color: #00bbff;
+}
+.submitFile:active{
+    background-color: #006fff;
+}
+.regionSelection{
+    margin-top:30px;
+    display:flex;
 }
