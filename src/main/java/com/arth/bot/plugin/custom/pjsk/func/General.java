@@ -88,8 +88,7 @@ public final class General {
             ctx.sender().replyText(payload, "You haven't bound any pjsk id yet");
         } else {
             StringBuilder sb = new StringBuilder();
-            sb.append("查询到下述绑定：");
-            boolean updated = false;
+            sb.append("查询到下述绑定：\n");
 
             for (var entry : REGION_GETTERS.entrySet()) {
                 String region = entry.getKey();
@@ -97,16 +96,11 @@ public final class General {
                 String pjskId = getter.apply(binding);
                 if (pjskId != null && !pjskId.isEmpty()) {
                     sb.append("  - region: " + region + ", id: " + pjskId + "\n");
-                    updated = true;
                 }
             }
 
-            if (!updated) {
-                ctx.sender().replyText(payload, "意料之外的问题：绑定记录存在，但没有找到任何 id 字段");
-            } else {
-                sb.setLength(sb.length() - 1);
-                ctx.sender().replyText(payload, sb.toString());
-            }
+            sb.append("  - 默认服务器: " + binding.getDefaultServerRegion());
+            ctx.sender().replyText(payload, sb.toString());
         }
     }
 
@@ -118,17 +112,20 @@ public final class General {
         long userId = payload.getUserId();
         PjskBinding binding = queryBinding(ctx, userId);
 
+        // 账户绑定记录不存在
         if (binding == null) {
             ctx.sender().replyText(payload, "You haven't bound any pjsk id yet");
         } else {
             Function<PjskBinding, String> getter = REGION_GETTERS.get(region);
             String pjskId = getter.apply(binding);
 
-            if (pjskId != null || !pjskId.isEmpty()) {
+            // 账户绑定记录存在，但该 region 对应的 id 为空
+            if (pjskId == null || !pjskId.isEmpty()) {
+                ctx.sender().replyText(payload, region + " 尚未绑定 id，不能设置为默认服务器");
+            } else {
+                // 账户绑定记录存在，且 region 对应的 id 非空
                 binding.setDefaultServerRegion(region);
                 ctx.sender().replyText(payload, "成功修改默认服务器为 " + region + "！" + suffix);
-            } else {
-                ctx.sender().replyText(payload, region + " 尚未绑定 id，不能设置为默认服务器");
             }
         }
     }

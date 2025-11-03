@@ -148,6 +148,7 @@ public final class Suite {
 
     private static General.IdRegionPair getIdRegionFromArgs(Pjsk.CoreBeanContext ctx, long userId, List<String> args) throws ResourceNotFoundException {
         PjskBinding binding = General.queryBinding(ctx, userId);
+        if (binding == null) return null;
 
         String region;
         if (args == null || args.isEmpty() || !General.isRegionValid(args.get(args.size() - 1))) {

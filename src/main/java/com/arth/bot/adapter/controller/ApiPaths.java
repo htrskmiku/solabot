@@ -8,13 +8,6 @@ import java.nio.file.Path;
 @Component
 public class ApiPaths {
 
-    @Value("${app.client-access-network-endpoint}") String networkEndpoint;
-
-    @Value("${app.local-path.pjsk-resource.dynamic.mysekai.root}") String rootPath;
-    public static Path mysekaiResrouceBaseDir;
-
-    public static String DOMIN_NAME = "yly.dylancloud.uk";
-
     /*
       CacheService 相关路径
     */
@@ -42,6 +35,7 @@ public class ApiPaths {
     public static final String PJSK_MYSEKAI_OVERVIEW = "/api/v1/pjsk/resource/{region}/mysekai/{id}/overview";
     public static final String PJSK_UPLOAD_JS = "/upload.js";
     public static final String PJSK_UPLOAD = "/upload";
+    public static final String PJSK_WEB_UPLOAD = "/api/upload";
     public static final String SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN = "/api/v1/pjsk/module/cn/mysekai";
     public static final String MYSEKAI_UPLOAD_PROXY = "/api/v1/pjsk/upload/mysekai";
 
@@ -57,13 +51,33 @@ public class ApiPaths {
         return DOMIN_NAME + SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN;
     }
 
+
     /*
       local path
      */
     public Path getMysekaiResourceBaseDir() {
-        if (mysekaiResrouceBaseDir == null) {
-            mysekaiResrouceBaseDir = Path.of(rootPath).toAbsolutePath().normalize();
+        Path result = mysekaiResrouceBaseDir;
+        if (result == null) {
+            synchronized (this) {
+                result = mysekaiResrouceBaseDir;
+                if (result == null) {
+                    mysekaiResrouceBaseDir = result = Path.of(rootPath).toAbsolutePath().normalize();
+                }
+            }
         }
-        return mysekaiResrouceBaseDir;
+        return result;
     }
+
+
+    // **============--  Autowired Filed   --============**
+    // **============--  Autowired Filed   --============**
+    // **============--  Autowired Filed   --============**
+
+
+    @Value("${app.client-access-network-endpoint}") String networkEndpoint;
+
+    @Value("${app.local-path.pjsk-resource.dynamic.mysekai.root}") String rootPath;
+    public volatile Path mysekaiResrouceBaseDir;
+
+    public static String DOMIN_NAME = "yly.dylancloud.uk";
 }

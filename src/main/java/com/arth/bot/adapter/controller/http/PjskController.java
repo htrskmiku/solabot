@@ -6,17 +6,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
@@ -29,6 +30,7 @@ public class PjskController {
     private final ResourceLoader resourceLoader;
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final ApiPaths apiPaths;
 
     /**
      * Mysekai 透视 map 请求
@@ -79,30 +81,6 @@ public class PjskController {
         }
     }
 
-//    /**
-//     * 获取转发脚本的请求
-//     *
-//     * @param request
-//     * @return
-//     * @throws IOException
-//     */
-//    @GetMapping(ApiPaths.PJSK_UPLOAD_JS)
-//    public ResponseEntity<Resource> getUploadJs(HttpServletRequest request) throws IOException {
-//        try {
-//            Resource resource = resourceLoader.getResource("classpath:static/pjsk/proxy_software_module/script.js");
-//
-//            if (!resource.exists()) return ResponseEntity.notFound().build();
-//
-//            return ResponseEntity.ok()
-//                    .contentType(MediaType.parseMediaType("text/plain; charset=utf-8"))
-//                    .header("Content-Disposition", "inline; filename=\"script.js\"")
-//                    .body(resource);
-//
-//        } catch (Exception e) {
-//            return ResponseEntity.internalServerError().build();
-//        }
-//    }
-
     /**
      * 模块重定向至此处，后端负责向游戏服务器请求数据
      *
@@ -114,32 +92,58 @@ public class PjskController {
     @RequestMapping(path = ApiPaths.MYSEKAI_UPLOAD_PROXY, method = {RequestMethod.GET, RequestMethod.POST})
     public ResponseEntity<Resource> proxyUpload(
             HttpServletRequest request,
-            @RequestParam("original") String original,
-            @RequestParam("user") String user,
-            @RequestParam("force") String force
+            @RequestParam("original") String original
     ) throws IOException {
         log.debug("[adapter.http] received mysekai proxy request: {}", NetworkUtils.getRequestInfoStr(objectMapper, request));
-        byte[] body = NetworkUtils.readBody(request);
-        String targetUrl = original.replace("{user}", user).replace("{force}", force);
-        ResponseEntity<Resource> response = NetworkUtils.proxyRequest(webClient, targetUrl, request, body);
-        log.debug("[adapter.http] proxied successfully");
-
-        CompletableFuture.runAsync(() -> {
-            try {
-                webClient.post()
-                        .uri("http://localhost:8849/upload")
-                        .contentType(response.getHeaders().getContentType())
-                        .bodyValue(body)
-                        .retrieve()
-                        .bodyToMono(String.class)
-                        .block();
-            } catch (Exception e) {
-                log.error("[adapter.http] async request failed: " + e.getMessage());
+        final byte[] reqBody = NetworkUtils.readBody(request);
+        ResponseEntity<Resource> upstream = NetworkUtils.proxyRequest(webClient, original, request, reqBody);
+        log.debug("[adapter.http] proxied successfully status={}", upstream.getStatusCode().value());
+        byte[] tmp = new byte[0];
+        if (upstream.getBody() instanceof ByteArrayResource bar) {
+            tmp = bar.getByteArray();
+        } else if (upstream.getBody() != null) {
+            try (InputStream is = upstream.getBody().getInputStream()) {
+                tmp = is.readAllBytes();
             }
-        });
+        }
+        final byte[] upstreamBytes = tmp;
+        MediaType ct = upstream.getHeaders().getContentType();
+        if (ct == null) ct = MediaType.APPLICATION_OCTET_STREAM;
+        final MediaType contentType = ct;
+        webClient.post()
+                .uri("http://localhost:8849/upload")
+                .contentType(contentType)
+                .header("X-Original-Url", original)
+                .header("X-Upstream-Status", String.valueOf(upstream.getStatusCode().value()))
+                .bodyValue(upstreamBytes)
+                .retrieve()
+                .bodyToMono(String.class)
+                .doOnError(e -> log.error("[adapter.http] async request failed", e))
+                .subscribe(resp -> log.info("[adapter.http] python resp: {}", resp));
 
-        return response;
+        return upstream;
     }
+
+
+    @PostMapping(ApiPaths.PJSK_WEB_UPLOAD)
+    public String upload(@RequestParam("file") MultipartFile file, @RequestParam("filetype") String filetype, @RequestParam("region") String region) throws IOException {
+        byte[] body = file.getBytes();
+        switch (filetype) {
+            case "mysekai":
+                break;
+            case "suite":
+                break;
+        }
+        return "1234";
+    }//TODO:与前端对接
+    /*
+        前端返回格式：MultipartFile file（文件）  String filetype（文件类型，suite或mysekai）   String region（游戏区服）
+        后端返回格式(JSON)：
+        {
+          "success" : 布尔值,
+          "errormsg" : 字符串，错误信息
+        }
+     */
 
 
     // **============  helper  ============**
@@ -162,11 +166,11 @@ public class PjskController {
             return ResponseEntity.badRequest().build();
         }
 
-        Path subDir = ApiPaths.mysekaiResrouceBaseDir.resolve(type).normalize();
+        Path subDir = apiPaths.getMysekaiResourceBaseDir().resolve(type).normalize();
         Path file = subDir.resolve(region + "_" + id + ".png").normalize();
 
         // 403: 确保最终路径仍在 BASE_DIR 下，避免目录遍历攻击
-        if (!file.startsWith(ApiPaths.mysekaiResrouceBaseDir)) return ResponseEntity.status(403).build();
+        if (!file.startsWith(apiPaths.getMysekaiResourceBaseDir())) return ResponseEntity.status(403).build();
 
         // 404
         if (!Files.exists(file) || !Files.isRegularFile(file)) return ResponseEntity.notFound().build();

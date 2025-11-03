@@ -61,8 +61,10 @@ public final class Decryptor {
     /**
      * 静态工厂：按 region 创建实例
      */
-    public static Decryptor forRegion(Region region) {
-        return new Decryptor(region);
+    public static Decryptor forRegion(ObjectMapper objectMapper, Region region) {
+        Decryptor builder = new Decryptor(region);
+        builder.objectMapper = objectMapper;
+        return builder;
     }
 
     /**
@@ -178,17 +180,17 @@ public final class Decryptor {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        String path = "C:\\Users\\asheo\\Desktop\\工作区\\mysuite.bin";
-        byte[] cipherBytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path));
-        ObjectMapper mapper = new ObjectMapper();
-        Decryptor.Region region = Decryptor.Region.JP;
-
-        JsonNode node = Decryptor.forRegion(region)
-                .withObjectMapper(mapper)
-                .decrypt(cipherBytes)
-                .toJsonNode();
-
-        System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node));
-    }
+//    public static void main(String[] args) throws Exception {
+//        String path = "C:\\Users\\asheo\\Desktop\\工作区\\mysuite.bin";
+//        byte[] cipherBytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path));
+//        ObjectMapper mapper = new ObjectMapper();
+//        Decryptor.Region region = Decryptor.Region.JP;
+//
+//        JsonNode node = Decryptor.forRegion(region)
+//                .withObjectMapper(mapper)
+//                .decrypt(cipherBytes)
+//                .toJsonNode();
+//
+//        System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node));
+//    }
 }
