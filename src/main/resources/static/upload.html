@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solabot 文件上传</title>
+    <style>
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #39C5BB, #1a7a74);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            transition: transform 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        /* 头部样式 */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+
+        /* 表单组样式 */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 16px;
+        }
+
+        /* 选择框样式 */
+        .select-wrapper {
+            position: relative;
+        }
+
+        .select-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #39C5BB;
+            pointer-events: none;
+        }
+
+        #dataType {
+            width: 100%;
+            height: 50px;
+            padding: 0 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            background-color: white;
+            font-size: 16px;
+            color: #2c3e50;
+            appearance: none;
+            transition: all 0.3s ease;
+        }
+
+        #dataType:focus {
+            border-color: #39C5BB;
+            box-shadow: 0 0 0 3px rgba(57, 197, 187, 0.2);
+            outline: none;
+        }
+
+        /* 文件上传区域样式 */
+        .file-upload-area {
+            position: relative;
+            border: 2px dashed #bdc3c7;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+
+        .file-upload-area:hover, .file-upload-area.dragover {
+            border-color: #39C5BB;
+            background-color: rgba(57, 197, 187, 0.05);
+        }
+
+        .upload-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+            color: #39C5BB;
+        }
+
+        .upload-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.5;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .upload-hint {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .file-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* 已选择文件样式 */
+        .selected-file {
+            display: none;
+            align-items: center;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .file-icon {
+            margin-right: 15px;
+            color: #39C5BB;
+        }
+
+        .file-info {
+            flex-grow: 1;
+            text-align: left;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .remove-file {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+
+        .remove-file:hover {
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        /* 上传按钮样式 */
+        .upload-button {
+            width: 100%;
+            height: 55px;
+            background: linear-gradient(135deg, #39C5BB, #2aa79b);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(57, 197, 187, 0.3);
+        }
+
+        .upload-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(57, 197, 187, 0.4);
+        }
+
+        .upload-button:active {
+            transform: translateY(1px);
+        }
+
+        .upload-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Solabot 文件上传</h1>
+        <p>选择数据类型并上传您的文件</p>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">数据类型</label>
+        <div class="select-wrapper">
+            <select id="dataType">
+                <option value="suite">Suite</option>
+                <option value="mysekai">MySekai</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">选择文件</label>
+        <div class="file-upload-area" id="fileUploadArea">
+            <div class="upload-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </div>
+            <p class="upload-text">
+                <strong>点击选择</strong> 或拖拽文件到此处
+            </p>
+            <p class="upload-hint">支持未解密二进制文件和已解密json文件</p>
+            <input type="file" class="file-input" id="fileInput">
+        </div>
+
+        <div class="selected-file" id="selectedFile">
+            <div class="file-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" stroke="#667eea" stroke-width="2"/>
+                    <polyline points="13 2 13 9 20 9" stroke="#667eea" stroke-width="2"/>
+                </svg>
+            </div>
+            <div class="file-info">
+                <div class="file-name" id="fileName"></div>
+                <div class="file-size" id="fileSize"></div>
+            </div>
+            <button class="remove-file" id="removeFile">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/>
+                    <line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <button class="upload-button" id="uploadButton" disabled>上传文件</button>
+</div>
+
+
+</body>
+<script src="js/upload.js"></script>
+</html>

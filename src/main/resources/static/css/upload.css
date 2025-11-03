@@ -1,0 +1,55 @@
+
+
+body{
+    background-image: url("../test/saki.jpg");
+    #background-color: #39C5BB;
+}
+.windowBody{
+    display:grid;
+    place-items:center;
+    height:100vh;
+}
+.windowMain{
+    backdrop-filter: blur(20px);
+    place-items:center;
+    text-align:center;
+    background-color: white;
+    height: 400px;
+    width: 550px;
+    opacity: 0.8;
+    border-radius: 30px;
+}
+.labelHead{
+    font-size:25px;
+    color: black;
+}
+select.dataTypeSelector{
+    margin-top:13px;
+    border-radius: 10px;
+    border:solid 1px #39C5BB;
+}
+
+.dataTypeSelector{
+    height:30px;
+    width:200px;
+}
+.dataTypeDiv{
+    margin-top:50px;
+    display:flex;
+}
+/*.fileInput{*/
+/*    opacity: 1;*/
+/*    font-size:15px;*/
+/*}*/
+.fileInput {
+    margin-left: 10px;
+    display: inline-block;
+    background-color: #39C5BB;
+    color: white;
+    height:50px;
+    width: 100px;
+    border-radius: 50px;
+    font-weight: 30;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
