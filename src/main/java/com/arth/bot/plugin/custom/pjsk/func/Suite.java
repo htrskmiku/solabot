@@ -1,14 +1,14 @@
 package com.arth.bot.plugin.custom.pjsk.func;
 
+import com.arth.bot.adapter.dto.UploadResponseDTO;
 import com.arth.bot.adapter.sender.action.ActionChainBuilder;
 import com.arth.bot.core.common.dto.ParsedPayloadDTO;
 import com.arth.bot.core.common.exception.ExternalServiceErrorException;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.common.exception.ResourceNotFoundException;
 import com.arth.bot.core.database.domain.PjskBinding;
-import com.arth.bot.core.utils.FileUtils;
+import com.arth.bot.plugin.custom.pjsk.utils.FileUtils;
 import com.arth.bot.plugin.custom.pjsk.Pjsk;
-import com.arth.bot.plugin.custom.pjsk.objects.UploadPageJsonResponse;
 import com.arth.bot.plugin.custom.pjsk.render.ImageRenderer;
 import com.arth.bot.plugin.custom.pjsk.objects.PjskCardInfo;
 import com.arth.bot.plugin.custom.pjsk.objects.PjskCard;
@@ -17,7 +17,6 @@ import com.arth.bot.plugin.resource.FilePaths;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -26,18 +25,14 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 @Slf4j
 public final class Suite {
@@ -86,7 +81,8 @@ public final class Suite {
                 suiteData = getDefaultSuite(ctx);
             }else {
                 try {
-                    suiteData = requestSuite(ctx, region, id);
+                    suiteData = getLocalOrRequestAndCacheSuite(ctx,region,id);
+                    //suiteData = requestSuite(ctx, region, id);
                 } catch (ExternalServiceErrorException e) {
                     ctx.sender().replyText(payload, "向 hrk 请求数据失败，可能还没有在 hrk 上传过 suite");
                     return;
@@ -154,7 +150,7 @@ public final class Suite {
     // ***** ============= handle uploaded file  ============= *****
     // ***** ============= handle uploaded file  ============= *****
     // ***** ============= handle uploaded file  ============= *****
-    public static String handleUploadedSuite(boolean encrypted, byte[] file, String region) throws JsonProcessingException {
+    public static UploadResponseDTO handleUploadedSuite(boolean encrypted, byte[] file, String region) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode node;
         if (encrypted) {
@@ -164,14 +160,14 @@ public final class Suite {
                         .toJsonNode();
             }catch (Exception e) {
                 log.info(e.getMessage(),e);
-                return mapper.writeValueAsString(UploadPageJsonResponse.build(false,"Error while decrypting file"));
+                return UploadResponseDTO.build(false,"Error while decrypting file");
             }
         }else {
             try {
                 node = mapper.readTree(file);
             }catch (Exception e) {
                 log.error(e.getMessage(),e);
-                return mapper.writeValueAsString(UploadPageJsonResponse.build(false,"Error while convert to String directly"));
+                return UploadResponseDTO.build(false,"Error while convert to String directly");
             }
         }
 
@@ -189,12 +185,12 @@ public final class Suite {
                     case "tw" -> FileUtils.createFolders(Path.of(FilePaths.PJSK_SUITE_URL_TW).toAbsolutePath());
             }
 
-            Files.writeString(suitePath, node.asText());
-            return mapper.writeValueAsString(UploadPageJsonResponse.build(true,UploadPageJsonResponse.SUCCESS_MSG,uploadedSuiteTimeStamp));
+            Files.writeString(suitePath, mapper.writeValueAsString(node));
+            return UploadResponseDTO.build(true,"upload success",uploadedSuiteTimeStamp);
 
         }catch (IOException e){
             log.error(e.getMessage(),e);
-            return mapper.writeValueAsString(UploadPageJsonResponse.build(false,"Error while creating file"));
+            return UploadResponseDTO.build(false,"Error while creating file");
         }
     }
 
@@ -226,6 +222,43 @@ public final class Suite {
     // ***** ============= request helper ============= *****
     // ***** ============= request helper ============= *****
     // ***** ============= request helper ============= *****
+
+    /**
+     * 获取本地suite，或从hrkAPI拉取后保存
+     * @param ctx
+     * @param region
+     * @param id
+     * @return
+     */
+    private static JsonNode getLocalOrRequestAndCacheSuite(Pjsk.CoreBeanContext ctx,String region,String id) {
+        Path suiteFilePath = Path.of(FilePaths.PJSK_SUITE_JSON_URL.replace("{region}",region).replace("{id}",id));
+        if (FileUtils.fileExists(suiteFilePath)) {
+            try{
+                return ctx.objectMapper().readTree(suiteFilePath.toFile());
+            }catch (IOException e) {
+                log.error(e.getMessage(),e);
+                log.error("Getting local suite file failed,try fetch suite file online.");
+                return requestSuite(ctx,region,id);
+            }
+        }else {
+            JsonNode node = requestSuite(ctx,region,id);
+            try {
+                switch (region) {
+                    case "cn" -> FileUtils.createFolders(Path.of(FilePaths.PJSK_SUITE_URL_CN).toAbsolutePath());
+                    case "jp" -> FileUtils.createFolders(Path.of(FilePaths.PJSK_SUITE_URL_JP).toAbsolutePath());
+                    case "tw" -> FileUtils.createFolders(Path.of(FilePaths.PJSK_SUITE_URL_TW).toAbsolutePath());
+                }
+                FileUtils.getOrCreateFile(suiteFilePath);
+                String content = ctx.objectMapper().writeValueAsString(node);
+                Files.writeString(suiteFilePath, content);
+            } catch (IOException e) {
+                log.error(e.getMessage(),e);
+                log.error("Saving suite file to local failed.Aborting box task.");
+                throw new InternalServerErrorException();
+            }
+            return node;
+        }//有无异步保存文件必要
+    }
 
     private static byte[] requestThumbnail(Pjsk.CoreBeanContext ctx, int cardId) {
         String url = ctx.thumbnailApi().replace("{{cardId}}", String.valueOf(cardId));

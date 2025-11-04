@@ -2,7 +2,7 @@ package com.arth.bot.plugin.custom.pjsk.func;
 
 import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.common.exception.ResourceNotFoundException;
-import com.arth.bot.core.utils.FileUtils;
+import com.arth.bot.plugin.custom.pjsk.utils.FileUtils;
 import com.arth.bot.plugin.custom.pjsk.Pjsk;
 import com.arth.bot.plugin.custom.pjsk.objects.PjskCard;
 
