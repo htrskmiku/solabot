@@ -1,6 +1,5 @@
 package com.arth.bot.adapter.dto;
 
-import com.arth.bot.plugin.custom.pjsk.objects.UploadPageJsonResponse;
 import lombok.Data;
 
 @Data
