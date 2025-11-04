@@ -2,6 +2,7 @@ package com.arth.bot.adapter.controller.http;
 
 import com.arth.bot.adapter.controller.ApiPaths;
 import com.arth.bot.adapter.utils.NetworkUtils;
+import com.arth.bot.plugin.custom.pjsk.func.Suite;
 import com.arth.bot.plugin.custom.pjsk.utils.Decryptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -117,21 +118,29 @@ public class PjskController {
 
     @PostMapping( ApiPaths.PJSK_WEB_UPLOAD)
     public String upload(@RequestParam("file") MultipartFile file,@RequestParam("filetype") String filetype,@RequestParam("region") String region) throws IOException {
+        //抽象判断，判断第一个byte是否为123 "{" ,如何更合理的判断？
         byte[] body = file.getBytes();
+        String response;
+        boolean encrypted = (body[0] != 123);
         switch (filetype) {
             case "mysekai":
+                response = "{\"success\":false,\"message\":\"developing\"}";
                 break;
             case "suite":
+                response = Suite.handleUploadedSuite(encrypted,body,region);
+                break;
+            default:
+                response = "{\"success\":false,\"message\":\"illegal arguments\"}";
                 break;
         }
-        return "1234";
+        return response;
     }//TODO:与前端对接
     /*
         前端返回格式：MultipartFile file（文件）  String filetype（文件类型，suite或mysekai）   String region（游戏区服）
         后端返回格式(JSON)：
         {
           "success" : 布尔值,
-          "errormsg" : 字符串，错误信息
+          "message" : 字符串，错误信息
         }
      */
 

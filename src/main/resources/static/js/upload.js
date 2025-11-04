@@ -38,22 +38,25 @@ document.addEventListener("DOMContentLoaded",()=>{
             formData.append("filetype", dataTypeSelector.value)
             formData.append("region", pjskRegion)
             fetch("/api/upload", {
-                method: "POST",
-                body: formData,
+                    method: "POST",
+                    body: formData,
             }).then((response) => {
-                response.json().then(data => {
-                    response = JSON.parse(data)
-                    if(response.success){
-                        showCustomToast('success', '上传成功', '资料上传成功！快去群里试试吧', 4000);
-                    }else {
-                        showCustomToast('error', '出现错误', '出现错误，请联系管理员.' + response.errormsg, 4000);
-                    }
-                })
+                    response.json().then(data => {
+                        console.log(data)
+                        if(data.success){
+                            var date = new Date(data.suiteTimestamp)
+                            showCustomToast('success', '上传成功', '资料上传成功！快去群里试试吧', 4000);
+                            showCustomToast('info', '数据日期', '数据日期为'+date, 4000);
+                        }else {
+                            showCustomToast('error', '出现错误', '出现错误，请联系管理员.' + response.message, 4000);
+                        }
+                    })
             })
-            selectFile.clear()
+            selectFile.files[0] = undefined;
             buttonSelectFile.innerText = "选择文件"
         }catch(err){
             showCustomToast('error', '出现错误', '出现错误，请联系管理员.' + err, 4000);
+            selectFile.files[0] = undefined;
             buttonSelectFile.innerText = "选择文件"
         }
 

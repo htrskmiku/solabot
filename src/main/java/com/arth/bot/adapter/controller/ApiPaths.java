@@ -34,12 +34,14 @@ public class ApiPaths {
     /*
       PJSK 相关路径
      */
+    public static final String PJSK_SUITE_URL = "/static/pjsk/master_data/suite";
     public static final String PJSK_MYSEKAI_MAP = "/api/v1/pjsk/resource/{region}/mysekai/{id}/map";
     public static final String PJSK_MYSEKAI_OVERVIEW = "/api/v1/pjsk/resource/{region}/mysekai/{id}/overview";
     public static final String PJSK_UPLOAD_JS = "/upload.js";
     public static final String PJSK_UPLOAD = "/upload";
     public static final String PJSK_WEB_UPLOAD = "/api/upload";
     public static final String SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN = "/api/v1/pjsk/module/cn/mysekai";
+
 
     public String buildMysekaiMapUrl(String region, String id) {
         return networkEndpoint + "/api/v1/pjsk/resource/" + region + "/mysekai/" + id + "/map";

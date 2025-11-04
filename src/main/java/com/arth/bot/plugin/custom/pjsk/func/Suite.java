@@ -6,11 +6,18 @@ import com.arth.bot.core.common.exception.ExternalServiceErrorException;
 import com.arth.bot.core.common.exception.InternalServerErrorException;
 import com.arth.bot.core.common.exception.ResourceNotFoundException;
 import com.arth.bot.core.database.domain.PjskBinding;
+import com.arth.bot.core.utils.FileUtils;
 import com.arth.bot.plugin.custom.pjsk.Pjsk;
+import com.arth.bot.plugin.custom.pjsk.objects.UploadPageJsonResponse;
 import com.arth.bot.plugin.custom.pjsk.render.ImageRenderer;
 import com.arth.bot.plugin.custom.pjsk.objects.PjskCardInfo;
 import com.arth.bot.plugin.custom.pjsk.objects.PjskCard;
+import com.arth.bot.plugin.custom.pjsk.utils.Decryptor;
+import com.arth.bot.plugin.resource.FilePaths;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -19,7 +26,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -141,6 +150,55 @@ public final class Suite {
 
     // ***** ======== FOR OFFLINE MODE ONLY ============ *****
     // ***** ======== FOR OFFLINE MODE ONLY ============ *****
+
+    // ***** ============= handle uploaded file  ============= *****
+    // ***** ============= handle uploaded file  ============= *****
+    // ***** ============= handle uploaded file  ============= *****
+    public static String handleUploadedSuite(boolean encrypted, byte[] file, String region) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode node;
+        if (encrypted) {
+            try {
+                node = Decryptor.forRegion(Decryptor.Region.valueOf(region.toUpperCase()))
+                        .decrypt(file)
+                        .toJsonNode();
+            }catch (Exception e) {
+                log.info(e.getMessage(),e);
+                return mapper.writeValueAsString(UploadPageJsonResponse.build(false,"Error while decrypting file"));
+            }
+        }else {
+            try {
+                node = mapper.readTree(file);
+            }catch (Exception e) {
+                log.error(e.getMessage(),e);
+                return mapper.writeValueAsString(UploadPageJsonResponse.build(false,"Error while convert to String directly"));
+            }
+        }
+
+        try {
+
+
+            String playerId = node.get("userGamedata").get("userId").asText();
+            long uploadedSuiteTimeStamp = node.get("now").asLong();
+
+            Path suitePath = Path.of(FilePaths.PJSK_SUITE_JSON_URL.replace("{region}",region).replace("{id}",playerId));
+
+            switch (region) {
+                    case "cn" -> FileUtils.createFolders(Path.of(FilePaths.PJSK_SUITE_URL_CN).toAbsolutePath());
+                    case "jp" -> FileUtils.createFolders(Path.of(FilePaths.PJSK_SUITE_URL_JP).toAbsolutePath());
+                    case "tw" -> FileUtils.createFolders(Path.of(FilePaths.PJSK_SUITE_URL_TW).toAbsolutePath());
+            }
+
+            Files.writeString(suitePath, node.asText());
+            return mapper.writeValueAsString(UploadPageJsonResponse.build(true,UploadPageJsonResponse.SUCCESS_MSG,uploadedSuiteTimeStamp));
+
+        }catch (IOException e){
+            log.error(e.getMessage(),e);
+            return mapper.writeValueAsString(UploadPageJsonResponse.build(false,"Error while creating file"));
+        }
+    }
+
+
 
     // ***** ============= account query  ============= *****
     // ***** ============= account query  ============= *****
