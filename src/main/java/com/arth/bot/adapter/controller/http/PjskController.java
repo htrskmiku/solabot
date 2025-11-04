@@ -1,7 +1,9 @@
 package com.arth.bot.adapter.controller.http;
 
 import com.arth.bot.adapter.controller.ApiPaths;
+import com.arth.bot.adapter.dto.UploadResponseDTO;
 import com.arth.bot.adapter.utils.NetworkUtils;
+import com.arth.bot.plugin.custom.pjsk.func.Suite;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -126,16 +128,26 @@ public class PjskController {
 
 
     @PostMapping(ApiPaths.PJSK_WEB_UPLOAD)
-    public String upload(@RequestParam("file") MultipartFile file, @RequestParam("filetype") String filetype, @RequestParam("region") String region) throws IOException {
+    public ResponseEntity<UploadResponseDTO> upload(@RequestParam("file") MultipartFile file, @RequestParam("filetype") String filetype, @RequestParam("region") String region) throws IOException {
+        //抽象判断，判断第一个byte是否为123 "{" ,如何更合理的判断？
         byte[] body = file.getBytes();
+        UploadResponseDTO response = new UploadResponseDTO();
+        boolean encrypted = (body[0] != 123);
         switch (filetype) {
             case "mysekai":
+                response.setSuccess(false);
+                response.setMessage("developing");
                 break;
             case "suite":
+                response = Suite.handleUploadedSuite(encrypted,body,region);
+                break;
+            default:
+                response.setSuccess(false);
+                response.setMessage("illegal arguments");
                 break;
         }
-        return "1234";
-    }//TODO:与前端对接
+        return ResponseEntity.ok(response);
+    }
     /*
         前端返回格式：MultipartFile file（文件）  String filetype（文件类型，suite或mysekai）   String region（游戏区服）
         后端返回格式(JSON)：

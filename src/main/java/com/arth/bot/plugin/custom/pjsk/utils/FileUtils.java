@@ -1,4 +1,4 @@
-package com.arth.bot.core.utils;
+package com.arth.bot.plugin.custom.pjsk.utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,6 +25,10 @@ public class FileUtils {
             Files.createFile(path);
         }
         return path.toFile();
+    }
+
+    public static boolean fileExists(Path path) {
+        return Files.exists(path);
     }
 
 }

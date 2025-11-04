@@ -52,12 +52,8 @@ document.addEventListener("DOMContentLoaded",()=>{
                         }
                     })
             })
-            selectFile.files[0] = undefined;
-            buttonSelectFile.innerText = "选择文件"
         }catch(err){
             showCustomToast('error', '出现错误', '出现错误，请联系管理员.' + err, 4000);
-            selectFile.files[0] = undefined;
-            buttonSelectFile.innerText = "选择文件"
         }
 
     }
