@@ -3,21 +3,10 @@ server:
   port: 8848
 
 app:
-  client-access-network-endpoint: "http://localhost:8848"
-
-  local-path:
-    pjsk-resource:
-      static:
-        master-data:
-          cards: "static/pjsk/master_data/cards"
-          root: "static/pjsk/master_data"
-          jp: "static/pjsk/master_data/jp"
-
-      dynamic:
-        mysekai:
-          root: "dynamic/pjsk_user_data/mysekai/draw"
-          map: "dynamic/pjsk_user_data/mysekai/draw/map/"
-          overview: "dynamic/pjsk_user_data/mysekai/draw/overview/"
+  domain-name: "http://192.168.1.10:8848"  # 本地测试时，可以改为 "http://localhost:8848"
+  # "https://yly.dylancloud.uk"
+  # "http://localhost:8848"
+  # "http://192.168.1.10:8848"
 
   parameter:
     cache:
