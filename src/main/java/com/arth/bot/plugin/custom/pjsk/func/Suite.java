@@ -159,7 +159,7 @@ public final class Suite {
         JsonNode node;
         if (encrypted) {
             try {
-                node = Decryptor.forRegion(Decryptor.Region.valueOf(region.toUpperCase()))
+                node = Decryptor.forRegion(mapper,Decryptor.Region.valueOf(region.toUpperCase()))
                         .decrypt(file)
                         .toJsonNode();
             }catch (Exception e) {
