@@ -84,4 +84,11 @@ public final class Mysekai {
         if (!Files.exists(filePath)) throw new ResourceNotFoundException("File not found: " + filePath.getFileName());
         return filePath;
     }
+
+    // ***** ============= uploaded file processor ============= *****
+    // ***** ============= uploaded file processor ============= *****
+    // ***** ============= uploaded file processor ============= *****
+    private static void processMysekaiFile(){
+
+    }
 }
