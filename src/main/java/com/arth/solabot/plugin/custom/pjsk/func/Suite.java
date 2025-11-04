@@ -8,15 +8,11 @@ import com.arth.solabot.core.bot.exception.ResourceNotFoundException;
 import com.arth.solabot.core.general.database.domain.PjskBinding;
 import com.arth.solabot.core.general.utils.FileUtils;
 import com.arth.solabot.plugin.custom.pjsk.Pjsk;
-import com.arth.solabot.plugin.custom.pjsk.objects.UploadPageJsonResponse;
 import com.arth.solabot.plugin.custom.pjsk.render.ImageRenderer;
 import com.arth.solabot.plugin.custom.pjsk.objects.PjskCardInfo;
 import com.arth.solabot.plugin.custom.pjsk.objects.PjskCard;
-import com.arth.solabot.plugin.custom.pjsk.utils.Decryptor;
 import com.arth.solabot.plugin.resource.FilePaths;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -80,7 +76,8 @@ public final class Suite {
                 suiteData = getDefaultSuite(ctx);
             } else {
                 try {
-                    suiteData = requestSuite(ctx, region, id);
+                    suiteData = getLocalOrRequestAndCacheSuite(ctx, region, id);
+                    //suiteData = requestSuite(ctx, region, id);
                 } catch (ExternalServiceErrorException e) {
                     ctx.sender().replyText(payload, "向 hrk 请求数据失败，可能还没有在 hrk 上传过 suite");
                     return;
@@ -147,53 +144,6 @@ public final class Suite {
     // ***** ======== FOR OFFLINE MODE ONLY ============ *****
     // ***** ======== FOR OFFLINE MODE ONLY ============ *****
 
-    // ***** ============= handle uploaded file  ============= *****
-    // ***** ============= handle uploaded file  ============= *****
-    // ***** ============= handle uploaded file  ============= *****
-    public static String handleUploadedSuite(Pjsk.CoreBeanContext ctx, boolean encrypted, byte[] file, String region) throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode node;
-        if (encrypted) {
-            try {
-                node = Decryptor.forRegion(mapper, Decryptor.Region.valueOf(region.toUpperCase()))
-                        .decrypt(file)
-                        .toJsonNode();
-            } catch (Exception e) {
-                log.info(e.getMessage(), e);
-                return mapper.writeValueAsString(UploadPageJsonResponse.build(false, "Error while decrypting file"));
-            }
-        } else {
-            try {
-                node = mapper.readTree(file);
-            } catch (Exception e) {
-                log.error(e.getMessage(), e);
-                return mapper.writeValueAsString(UploadPageJsonResponse.build(false, "Error while convert to String directly"));
-            }
-        }
-
-        try {
-
-
-            String playerId = node.get("userGamedata").get("userId").asText();
-            long uploadedSuiteTimeStamp = node.get("now").asLong();
-
-            Path suitePath = ctx.filePaths().getSuitePath(region, playerId);
-
-            switch (region) {
-                case "cn" -> FileUtils.createFolders(FilePaths.PJSK_SUITE_CN.toAbsolutePath());
-                case "jp" -> FileUtils.createFolders(FilePaths.PJSK_SUITE_JP.toAbsolutePath());
-                case "tw" -> FileUtils.createFolders(FilePaths.PJSK_SUITE_TW.toAbsolutePath());
-            }
-
-            Files.writeString(suitePath, node.asText());
-            return mapper.writeValueAsString(UploadPageJsonResponse.build(true, UploadPageJsonResponse.SUCCESS_MSG, uploadedSuiteTimeStamp));
-
-        } catch (IOException e) {
-            log.error(e.getMessage(), e);
-            return mapper.writeValueAsString(UploadPageJsonResponse.build(false, "Error while creating file"));
-        }
-    }
-
 
     // ***** ============= account query  ============= *****
     // ***** ============= account query  ============= *****
@@ -221,6 +171,44 @@ public final class Suite {
     // ***** ============= request helper ============= *****
     // ***** ============= request helper ============= *****
     // ***** ============= request helper ============= *****
+
+    /**
+     * 获取本地suite，或从hrkAPI拉取后保存
+     *
+     * @param ctx
+     * @param region
+     * @param id
+     * @return
+     */
+    private static JsonNode getLocalOrRequestAndCacheSuite(Pjsk.CoreBeanContext ctx, String region, String id) {
+        Path suiteFilePath = ctx.filePaths().getSuitePath(region, id);
+        if (FileUtils.fileExists(suiteFilePath)) {
+            try {
+                return ctx.objectMapper().readTree(suiteFilePath.toFile());
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+                log.error("Getting local suite file failed,try fetch suite file online.");
+                return requestSuite(ctx, region, id);
+            }
+        } else {
+            JsonNode node = requestSuite(ctx, region, id);
+            try {
+                switch (region) {
+                    case "cn" -> FileUtils.createFolders(FilePaths.PJSK_SUITE_CN.toAbsolutePath());
+                    case "jp" -> FileUtils.createFolders(FilePaths.PJSK_SUITE_JP.toAbsolutePath());
+                    case "tw" -> FileUtils.createFolders(FilePaths.PJSK_SUITE_TW.toAbsolutePath());
+                }
+                FileUtils.getOrCreateFile(suiteFilePath);
+                String content = ctx.objectMapper().writeValueAsString(node);
+                Files.writeString(suiteFilePath, content);
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+                log.error("Saving suite file to local failed.Aborting box task.");
+                throw new InternalServerErrorException();
+            }
+            return node;
+        }//有无异步保存文件必要
+    }
 
     private static byte[] requestThumbnail(Pjsk.CoreBeanContext ctx, int cardId) {
         String url = ctx.thumbnailApi().replace("{{cardId}}", String.valueOf(cardId));

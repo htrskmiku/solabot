@@ -44,7 +44,7 @@ public class BusinessExceptionHandlerAspect {
         try {
             return joinPoint.proceed();
         } catch (BusinessException e) {
-            log.debug("[core: business exception] " + e.getErrorCode() + ": {}", e.getMessage(), e);
+            log.debug("[core.bot: business exception] " + e.getErrorCode() + ": {}", e.getMessage(), e);
             return null;
         }
     }
@@ -56,7 +56,7 @@ public class BusinessExceptionHandlerAspect {
         if ("message".equalsIgnoreCase(behaviour)) {
             sender.replyText(payload, description);
         } else {
-            log.info("[core: business exception] {}", description);
+            log.info("[core.bot: business exception] {}", description);
         }
     }
 }

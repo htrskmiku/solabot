@@ -6,8 +6,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class FileUtils {
+
     /**
      * 文件夹不存在时自动创建，文件夹已存在时跳过
+     *
      * @param path
      * @throws IOException
      */
@@ -17,6 +19,7 @@ public class FileUtils {
 
     /**
      * 文件不存在时自动创建，文件已存在时获取该文件
+     *
      * @param path
      * @throws IOException
      */
@@ -27,4 +30,7 @@ public class FileUtils {
         return path.toFile();
     }
 
+    public static boolean fileExists(Path path) {
+        return Files.exists(path);
+    }
 }

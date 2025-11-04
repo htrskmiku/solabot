@@ -38,7 +38,11 @@ public class PjskController {
      */
     @GetMapping(ApiPaths.PJSK_MYSEKAI_MAP)
     public ResponseEntity<Resource> getMysekaiMap(@PathVariable String region, @PathVariable String id) throws IOException {
-        return buildMysekaiResourceResponseSafely(FilePaths.PJSK_MYSEKAI_MAP, region, id);
+        Path file = filePaths.resolveMysekaiResourcePath(FilePaths.PJSK_MYSEKAI_MAP, region, id);
+        Resource resource = new PathResource(file);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(resource);
     }
 
 
@@ -52,7 +56,11 @@ public class PjskController {
      */
     @GetMapping(ApiPaths.PJSK_MYSEKAI_OVERVIEW)
     public ResponseEntity<Resource> getMysekaiOverview(@PathVariable String region, @PathVariable String id) throws IOException {
-        return buildMysekaiResourceResponseSafely(FilePaths.PJSK_OVERVIEW_MAP, region, id);
+        Path file = filePaths.resolveMysekaiResourcePath(FilePaths.PJSK_MYSEKAI_OVERVIEW, region, id);
+        Resource resource = new PathResource(file);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(resource);
     }
 
     /**
@@ -90,7 +98,6 @@ public class PjskController {
             HttpServletRequest request,
             @RequestParam("original") String original
     ) throws IOException {
-        log.debug("[adapter.http] received mysekai proxy request: {}", NetworkUtils.getRequestInfoStr(objectMapper, request));
         final byte[] reqBody = NetworkUtils.readBody(request);
         ResponseEntity<Resource> upstream = NetworkUtils.proxyRequest(webClient, original, request, reqBody);
         log.debug("[adapter.http] proxied successfully status={}", upstream.getStatusCode().value());
@@ -154,26 +161,4 @@ public class PjskController {
 
         return ApiResponse.success("上传成功");
     }  //TODO:与前端对接
-
-
-    // **=============== helper ===============**
-    // **=============== helper ===============**
-    // **=============== helper ===============**
-
-
-    private ResponseEntity<Resource> buildMysekaiResourceResponseSafely(Path baseDir, String region, String id) {
-        try {
-            Path file = filePaths.resolveMysekaiResourcePath(baseDir, region, id);
-            Resource resource = new PathResource(file);
-            return ResponseEntity.ok()                  // 200
-                    .contentType(MediaType.IMAGE_PNG)
-                    .body(resource);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build(); // 400: 校验 region 与 id 格式
-        } catch (SecurityException e) {
-            return ResponseEntity.status(403).build();  // 403: 确保最终路径仍在 BASE_DIR 下，避免目录遍历攻击
-        } catch (IOException e) {
-            return ResponseEntity.notFound().build();   // 404
-        }
-    }
 }

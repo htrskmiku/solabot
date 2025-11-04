@@ -1,4 +1,4 @@
-package com.arth.solabot.adapter.controller.http.advice;
+package com.arth.solabot.adapter.controller.http.handler;
 
 import com.arth.solabot.adapter.controller.http.dto.ApiResponse;
 import jakarta.servlet.ServletException;

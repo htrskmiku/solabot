@@ -57,7 +57,7 @@ public class PluginRegistry {
 
     @PostConstruct
     void init() {
-        log.info("[core.invoker] scanning plugins under {}", PLUGIN_BASE_PACKAGE);
+        log.info("[core.bot.invoker] scanning plugins under {}", PLUGIN_BASE_PACKAGE);
         try {
             ClassPathScanningCandidateComponentProvider scanner =
                     new ClassPathScanningCandidateComponentProvider(false);
@@ -87,7 +87,7 @@ public class PluginRegistry {
                     for (String alias : cmdAnn.value()) {
                         String key = alias == null ? "" : alias.trim().toLowerCase(Locale.ROOT);
                         holder.addHandler(key, handler);
-                        log.info("[core.invoker] command alias `{}` of plugin {} is registered", key, clazz.getSimpleName());
+                        log.info("[core.bot.invoker] command alias `{}` of plugin {} is registered", key, clazz.getSimpleName());
                     }
                 }
 
@@ -95,7 +95,7 @@ public class PluginRegistry {
                 for (String alias : pluginAnn.value()) {
                     String key = alias.trim().toLowerCase(Locale.ROOT);
                     if (pluginRegistryMap.putIfAbsent(key, holder) != null) {
-                        log.warn("[core.invoker] duplicate plugin alias detected: {}", key);
+                        log.warn("[core.bot.invoker] duplicate plugin alias detected: {}", key);
                     }
                 }
 
@@ -111,17 +111,17 @@ public class PluginRegistry {
                         }
                     }
                 }
-                log.info("[core.invoker] registered plugin: {} -> {}", Arrays.toString(pluginAnn.value()), clazz.getSimpleName());
+                log.info("[core.bot.invoker] registered plugin: {} -> {}", Arrays.toString(pluginAnn.value()), clazz.getSimpleName());
             }
         } catch (Exception e) {
-            log.error("[core.invoker] failed to initialize PluginRegistry", e);
+            log.error("[core.bot.invoker] failed to initialize PluginRegistry", e);
             throw new InternalServerErrorException(
                     "Internal Server Error: failed to initialize PluginRegistry",
                     "框架初始化失败，请检查插件注册逻辑。");
         }
 
         if (pluginRegistryMap.isEmpty()) {
-            log.warn("[core.invoker] no plugins found under {}", PLUGIN_BASE_PACKAGE);
+            log.warn("[core.bot.invoker] no plugins found under {}", PLUGIN_BASE_PACKAGE);
         }
     }
 

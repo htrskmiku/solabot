@@ -41,7 +41,7 @@ public class Help extends Plugin {
                           - box <-r> <可选 cn/tw/jp>: 查询 box，已实装，半成品，不加参数为按角色排序，-r参数为按稀有度降序排列，默认国服
                           - luna茶的组卡器，尚未实装"""));
 
-        if (payload.getGroupId() != null && Set.of(619096416L, 1036993047L, 570656202L, 992406250L, 916204609L).contains(payload.getGroupId())) {
+        if (payload.getGroupId() != null && Set.of(619096416L, 1036993047L, 570656202L, 992406250L, 916204609L, 793709714L).contains(payload.getGroupId())) {
             building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                             我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""

@@ -19,7 +19,7 @@ public class FilePaths {
     /* Mysekai 透视图 map 路径 */
     public static final Path PJSK_MYSEKAI_MAP = Path.of("dynamic/pjsk_user_data/mysekai/draw/map");
     /* Mysekai 透视图 overview 路径 */
-    public static final Path PJSK_OVERVIEW_MAP = Path.of("dynamic/pjsk_user_data/mysekai/draw/overview");
+    public static final Path PJSK_MYSEKAI_OVERVIEW = Path.of("dynamic/pjsk_user_data/mysekai/draw/overview");
 
     /* 日服 master data 数据路径 */
     public static final Path PJSK_MASTER_DATA_PATH = Path.of("static/pjsk/master_data");
@@ -38,7 +38,7 @@ public class FilePaths {
 
     public Path resolveMysekaiResourcePath(Path baseDir, String region, String id) throws IOException {
         // 400: 参数格式
-        if (!region.matches("[a-zA-Z0-9_-]+") || !id.matches("[a-zA-Z0-9_-]+")) {
+        if (!region.matches("[a-zA-Z]+") || !id.matches("[0-9]+")) {
             throw new IllegalArgumentException("Invalid region or id format");
         }
 

@@ -47,7 +47,7 @@ public class CommandInvoker {
 
             // 1) 常规精准匹配：root 作为模块别名
             String parsedRoot = parsed.root();
-            log.info("[core.invoker] plugin calling detected: {}", parsedRoot);
+            log.info("[core.bot.invoker] plugin calling detected: {}", parsedRoot);
 
             PluginHolder holder = resolvePluginHolder(parsedRoot);
             List<String> stepsTokens = parsed.subAndArgs();
@@ -59,14 +59,14 @@ public class CommandInvoker {
                     holder = gm.holder;
                     String rest = parsed.rawNoSlash().substring(gm.matchedAlias.length()).trim();
                     stepsTokens = rest.isEmpty() ? List.of() : new ArrayList<>(Arrays.asList(rest.split(" ")));
-                    log.info("[core.invoker] glue matched plugin `{}`; rest=`{}`", gm.matchedAlias, rest);
+                    log.info("[core.bot.invoker] glue matched plugin `{}`; rest=`{}`", gm.matchedAlias, rest);
                     return runGrouped(payload, holder, groupStepsGlue(stepsTokens, holder));
                 }
             }
 
             if (holder == null) {
                 throw new CommandNotFoundException(
-                        "[core.invoker] plugin not found: " + parsedRoot,
+                        "[core.bot.invoker] plugin not found: " + parsedRoot,
                         "不存在名为 \"" + parsedRoot + "\" 的插件/模块，请检查输入。");
             }
 
@@ -77,7 +77,7 @@ public class CommandInvoker {
             log.error(e.getMessage(), e);
             throw e;
         } catch (Throwable e) {
-            log.error("[core.invoker] unexpected error while invoking", e);
+            log.error("[core.bot.invoker] unexpected error while invoking", e);
             throw new InternalServerErrorException(
                     "Internal Server Error: " + e.getMessage(),
                     "服务器内部错误：未知异常");
@@ -95,7 +95,7 @@ public class CommandInvoker {
             List<CommandHandler> candidates = getCandidatesWithIndexFallback(holder, s.name());
             if (candidates.isEmpty()) {
                 throw new CommandNotFoundException(
-                        "[core.invoker] command not supported: " + s.name(),
+                        "[core.bot.invoker] command not supported: " + s.name(),
                         "不支持的命令: " + s.name());
             }
 
@@ -155,27 +155,27 @@ public class CommandInvoker {
             if (isAlias) {
                 if (curName == null) {
                     curName = low;
-                    log.debug("[core.invoker] matched first command: {}", curName);
+                    log.debug("[core.bot.invoker] matched first command: {}", curName);
                 } else {
                     // 分组阶段的贪心策略：只要当前命令存在 “任一接参实现”，就把该 token 吞为参数
                     boolean greedy = acceptsArgsForGrouping(holder, curName);
                     if (greedy) {
                         curArgs.add(tk);
-                        log.debug("[core.invoker] matched args: {}", tk);
+                        log.debug("[core.bot.invoker] matched args: {}", tk);
                         continue;
                     }
                     // 当前命令不接参，结算并切换到新命令
                     out.add(new Step(curName, List.copyOf(curArgs)));
                     curName = low;
                     curArgs = new ArrayList<>();
-                    log.debug("[core.invoker] matched next command: {}", curName);
+                    log.debug("[core.bot.invoker] matched next command: {}", curName);
                 }
             } else {
                 // 普通参数
                 if (curName == null) {
                     // 首个 token 不是子命令别名时，启动 index 作为当前命令来承接参数
                     curName = indexAlias();
-                    log.debug("[core.invoker] matched args: {}", tk);
+                    log.debug("[core.bot.invoker] matched args: {}", tk);
                 }
                 curArgs.add(tk);
             }

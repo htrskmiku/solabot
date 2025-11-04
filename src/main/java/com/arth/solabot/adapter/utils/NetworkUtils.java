@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -94,6 +96,10 @@ public class NetworkUtils {
     }
 
     public static String getRequestInfoStr(ObjectMapper objectMapper, HttpServletRequest request) {
+        if (request == null) {
+            return "HttpServletRequest is null";
+        }
+
         Map<String, Object> requestInfo = new LinkedHashMap<>();
         requestInfo.put("method", request.getMethod());
         requestInfo.put("url", request.getRequestURL().toString());
@@ -102,6 +108,7 @@ public class NetworkUtils {
         requestInfo.put("remoteAddr", request.getRemoteAddr());
         requestInfo.put("contentType", request.getContentType());
         requestInfo.put("parameters", request.getParameterMap());
+
         Map<String, String> simpleHeaders = new LinkedHashMap<>();
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
@@ -109,12 +116,22 @@ public class NetworkUtils {
             simpleHeaders.put(name, request.getHeader(name));
         }
         requestInfo.put("headers", simpleHeaders);
+
         try {
-            ObjectMapper mapper = new ObjectMapper();
+            ObjectMapper mapper = objectMapper != null ? objectMapper : new ObjectMapper();
             mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
             return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestInfo);
         } catch (Exception e) {
             return "Error serializing request info: " + e.getMessage();
         }
+    }
+
+    public static String getRequestInfoStr(ObjectMapper objectMapper) {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs == null) {
+            return "No active request (RequestContextHolder is null)";
+        }
+        HttpServletRequest request = attrs.getRequest();
+        return getRequestInfoStr(objectMapper, request);
     }
 }
