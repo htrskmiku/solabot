@@ -44,10 +44,10 @@ public class Help extends Plugin {
             building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
                             我们的绑定功能没有接游戏 api，目前唯一的作用是定位自己的 mysekai，所以输错了也不会有提示"""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                            👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服+为例（需要其他服的模块可联系我）：在 配置→模块→右上角➕︎号，填入下面这个地址："""))
+                            👇要使用 mysekai 功能，iOS 请将使用下面的模块配置，以国服mysekai + Shadowracket为例（需要其他模块可联系我）：在 配置→模块→右上角➕︎号，填入下面这个地址："""))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text(apiPaths.getShadowrocketModuleDownloadMysekaiCn()))
                     .addCustomNode(payload.getSelfId(), "bot", n -> n.text("""
-                            模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块替换为我们的"""));
+                            模块的使用教程可以参考 https://bot.teaphenby.com/public/tutorial/tutorial.html，步骤大体相同，记得将模块url替换为我们的"""));
         } else {
             building.addCustomNode(payload.getSelfId(), "bot", n -> n.text("「当前群聊非翼遥啤酒烧烤大排档，烤森功能不可用，pjsk 模块剩余内容略」"));
         }

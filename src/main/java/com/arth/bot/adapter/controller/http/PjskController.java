@@ -2,13 +2,11 @@ package com.arth.bot.adapter.controller.http;
 
 import com.arth.bot.adapter.controller.ApiPaths;
 import com.arth.bot.adapter.utils.NetworkUtils;
-import com.arth.bot.plugin.custom.pjsk.func.Suite;
-import com.arth.bot.plugin.custom.pjsk.utils.Decryptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.UrlResource;
@@ -19,27 +17,20 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RestController
+@RequiredArgsConstructor
 public class PjskController {
 
-    private final Path BASE_DIR;
     private final ResourceLoader resourceLoader;
     private final WebClient webClient;
-
-    @Autowired
-    private PjskController(
-            @Value("${app.local-path.pjsk-resource.dynamic.mysekai.root}") String rootPath,
-            ResourceLoader resourceLoader,
-            WebClient webClient
-    ) {
-        BASE_DIR = Path.of(rootPath).toAbsolutePath().normalize();
-        this.resourceLoader = resourceLoader;
-        this.webClient = webClient;
-    }
+    private final ObjectMapper objectMapper;
+    private final ApiPaths apiPaths;
 
     /**
      * Mysekai 透视 map 请求
@@ -91,56 +82,66 @@ public class PjskController {
     }
 
     /**
-     * 获取转发脚本的请求（暂时的实现是原封不动地转发给 python 程序处理）
+     * 模块重定向至此处，后端负责向游戏服务器请求数据
      *
      * @param request
+     * @param original
      * @return
      * @throws IOException
      */
-    @GetMapping(ApiPaths.PJSK_UPLOAD_JS)
-    public ResponseEntity<Resource> getUploadJs(HttpServletRequest request) throws IOException {
-        byte[] body = NetworkUtils.readBody(request);
-        return NetworkUtils.proxyRequest(webClient, "http://localhost:8849/upload.js", request, body);
+    @RequestMapping(path = ApiPaths.MYSEKAI_UPLOAD_PROXY, method = {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<Resource> proxyUpload(
+            HttpServletRequest request,
+            @RequestParam("original") String original
+    ) throws IOException {
+        log.debug("[adapter.http] received mysekai proxy request: {}", NetworkUtils.getRequestInfoStr(objectMapper, request));
+        final byte[] reqBody = NetworkUtils.readBody(request);
+        ResponseEntity<Resource> upstream = NetworkUtils.proxyRequest(webClient, original, request, reqBody);
+        log.debug("[adapter.http] proxied successfully status={}", upstream.getStatusCode().value());
+        byte[] tmp = new byte[0];
+        if (upstream.getBody() instanceof ByteArrayResource bar) {
+            tmp = bar.getByteArray();
+        } else if (upstream.getBody() != null) {
+            try (InputStream is = upstream.getBody().getInputStream()) {
+                tmp = is.readAllBytes();
+            }
+        }
+        final byte[] upstreamBytes = tmp;
+        MediaType ct = upstream.getHeaders().getContentType();
+        if (ct == null) ct = MediaType.APPLICATION_OCTET_STREAM;
+        final MediaType contentType = ct;
+        webClient.post()
+                .uri("http://localhost:8849/upload")
+                .contentType(contentType)
+                .header("X-Original-Url", original)
+                .header("X-Upstream-Status", String.valueOf(upstream.getStatusCode().value()))
+                .bodyValue(upstreamBytes)
+                .retrieve()
+                .bodyToMono(String.class)
+                .doOnError(e -> log.error("[adapter.http] async request failed", e))
+                .subscribe(resp -> log.info("[adapter.http] python resp: {}", resp));
+
+        return upstream;
     }
 
-    /**
-     * 处理转发数据（暂时的实现是原封不动地转发给 python 程序处理）
-     *
-     * @param request
-     * @return
-     * @throws IOException
-     */
-    @PostMapping(ApiPaths.PJSK_UPLOAD)
-    public ResponseEntity<Resource> upload(HttpServletRequest request) throws IOException {
-        byte[] body = NetworkUtils.readBody(request);
-        return NetworkUtils.proxyRequest(webClient, "http://localhost:8849/upload", request, body);
-    }
 
-    @PostMapping( ApiPaths.PJSK_WEB_UPLOAD)
-    public String upload(@RequestParam("file") MultipartFile file,@RequestParam("filetype") String filetype,@RequestParam("region") String region) throws IOException {
-        //抽象判断，判断第一个byte是否为123 "{" ,如何更合理的判断？
+    @PostMapping(ApiPaths.PJSK_WEB_UPLOAD)
+    public String upload(@RequestParam("file") MultipartFile file, @RequestParam("filetype") String filetype, @RequestParam("region") String region) throws IOException {
         byte[] body = file.getBytes();
-        String response;
-        boolean encrypted = (body[0] != 123);
         switch (filetype) {
             case "mysekai":
-                response = "{\"success\":false,\"message\":\"developing\"}";
                 break;
             case "suite":
-                response = Suite.handleUploadedSuite(encrypted,body,region);
-                break;
-            default:
-                response = "{\"success\":false,\"message\":\"illegal arguments\"}";
                 break;
         }
-        return response;
+        return "1234";
     }//TODO:与前端对接
     /*
         前端返回格式：MultipartFile file（文件）  String filetype（文件类型，suite或mysekai）   String region（游戏区服）
         后端返回格式(JSON)：
         {
           "success" : 布尔值,
-          "message" : 字符串，错误信息
+          "errormsg" : 字符串，错误信息
         }
      */
 
@@ -165,11 +166,11 @@ public class PjskController {
             return ResponseEntity.badRequest().build();
         }
 
-        Path subDir = BASE_DIR.resolve(type).normalize();
+        Path subDir = apiPaths.getMysekaiResourceBaseDir().resolve(type).normalize();
         Path file = subDir.resolve(region + "_" + id + ".png").normalize();
 
         // 403: 确保最终路径仍在 BASE_DIR 下，避免目录遍历攻击
-        if (!file.startsWith(BASE_DIR)) return ResponseEntity.status(403).build();
+        if (!file.startsWith(apiPaths.getMysekaiResourceBaseDir())) return ResponseEntity.status(403).build();
 
         // 404
         if (!Files.exists(file) || !Files.isRegularFile(file)) return ResponseEntity.notFound().build();

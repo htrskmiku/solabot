@@ -1,5 +1,7 @@
 package com.arth.bot.adapter.utils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -12,10 +14,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 public class NetworkUtils {
@@ -42,61 +41,80 @@ public class NetworkUtils {
             byte[] body
     ) {
         log.debug("[adapter.util] prepared to forward request...");
-        HttpMethod method;
+        final HttpMethod method;
         try {
             method = HttpMethod.valueOf(request.getMethod());
         } catch (IllegalArgumentException e) {
             log.error("[adapter.util] Unsupported HTTP method: {}", request.getMethod(), e);
             throw new ServerWebInputException("Unsupported HTTP method: " + request.getMethod());
         }
-
-        URI uri = UriComponentsBuilder
-                .fromUriString(targetUrl)
-                .query(request.getQueryString())
+        final boolean absolute = targetUrl.startsWith("http://") || targetUrl.startsWith("https://");
+        final boolean hasQuery = targetUrl.contains("?");
+        final URI uri = absolute
+                ? URI.create(targetUrl)
+                : UriComponentsBuilder.fromUriString(targetUrl)
+                .query(!hasQuery ? request.getQueryString() : null)
                 .build(true)
                 .toUri();
-
         WebClient.RequestBodySpec requestSpec = webClient.method(method).uri(uri);
-
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
-            if (!HOP_BY_HOP_HEADERS.contains(headerName.toLowerCase())) {
-                Enumeration<String> values = request.getHeaders(headerName);
-                List<String> valueList = Collections.list(values);
-                requestSpec.header(headerName, valueList.toArray(String[]::new));
+            String lname = headerName.toLowerCase(Locale.ROOT);
+            if (HOP_BY_HOP_HEADERS.contains(lname)) continue;
+            if ("host".equals(lname) || "content-length".equals(lname)) continue;
+            List<String> values = Collections.list(request.getHeaders(headerName));
+            if (!values.isEmpty()) {
+                requestSpec.header(headerName, values.toArray(String[]::new));
             }
         }
-
         WebClient.RequestHeadersSpec<?> specToSend =
-                (body != null && body.length > 0)
-                        ? requestSpec.bodyValue(body)
-                        : requestSpec;
-
-
-        log.debug("[adapter.util] forwarding request to the target url: {}", targetUrl);
+                (body != null && body.length > 0) ? requestSpec.bodyValue(body) : requestSpec;
+        log.debug("[adapter.util] forwarding request to the target url: {}", uri);
         return specToSend.exchangeToMono(clientResponse -> {
-            log.debug("[adapter.util] received response from {}, forwarding back...", targetUrl);
-            HttpStatusCode status = clientResponse.statusCode();
-            HttpHeaders headers = new HttpHeaders();
-            clientResponse.headers().asHttpHeaders().forEach(headers::addAll);
-
+            final HttpStatusCode status = clientResponse.statusCode();
+            final HttpHeaders respHeaders = new HttpHeaders();
+            clientResponse.headers().asHttpHeaders().forEach(respHeaders::addAll);
             return clientResponse.bodyToMono(byte[].class)
                     .defaultIfEmpty(new byte[0])
-                    .map(responseBytes -> {
-                        Resource resource = new ByteArrayResource(responseBytes);
-                        return ResponseEntity.status(status)
-                                .headers(headers)
+                    .map(bytes -> {
+                        Resource resource = new ByteArrayResource(bytes);
+                        return ResponseEntity.status(status.value())
+                                .headers(respHeaders)
                                 .body(resource);
                     })
-                    .doOnNext(response -> log.debug("[adapter.util] forward success, status: {}", status));
+                    .doOnNext(resp -> log.debug("[adapter.util] forward success, status: {}", status.value()));
         }).block();
     }
-
 
     public static byte[] readBody(HttpServletRequest request) throws IOException {
         try (InputStream inputStream = request.getInputStream()) {
             return inputStream.readAllBytes();
+        }
+    }
+
+    public static String getRequestInfoStr(ObjectMapper objectMapper, HttpServletRequest request) {
+        Map<String, Object> requestInfo = new LinkedHashMap<>();
+        requestInfo.put("method", request.getMethod());
+        requestInfo.put("url", request.getRequestURL().toString());
+        requestInfo.put("uri", request.getRequestURI());
+        requestInfo.put("queryString", request.getQueryString());
+        requestInfo.put("remoteAddr", request.getRemoteAddr());
+        requestInfo.put("contentType", request.getContentType());
+        requestInfo.put("parameters", request.getParameterMap());
+        Map<String, String> simpleHeaders = new LinkedHashMap<>();
+        Enumeration<String> headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String name = headerNames.nextElement();
+            simpleHeaders.put(name, request.getHeader(name));
+        }
+        requestInfo.put("headers", simpleHeaders);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestInfo);
+        } catch (Exception e) {
+            return "Error serializing request info: " + e.getMessage();
         }
     }
 }

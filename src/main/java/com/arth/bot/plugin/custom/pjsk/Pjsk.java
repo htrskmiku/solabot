@@ -57,7 +57,7 @@ public class Pjsk extends Plugin {
         General.bound(getCtx(), payload);
     }
 
-    @BotCommand(("默认服务器"))
+    @BotCommand({"默认服务器", "默认", "default"})
     public void setDefaultServerRegion(ParsedPayloadDTO payload, List<String> args) {
         General.setDefaultServerRegion(getCtx(), payload, args);
     }

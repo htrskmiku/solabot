@@ -61,8 +61,10 @@ public final class Decryptor {
     /**
      * 静态工厂：按 region 创建实例
      */
-    public static Decryptor forRegion(Region region) {
-        return new Decryptor(region);
+    public static Decryptor forRegion(ObjectMapper objectMapper, Region region) {
+        Decryptor builder = new Decryptor(region);
+        builder.objectMapper = objectMapper;
+        return builder;
     }
 
     /**
