@@ -3,7 +3,7 @@ package com.arth.solabot.adapter.controller.http;
 import com.arth.solabot.adapter.controller.ApiPaths;
 import com.arth.solabot.adapter.controller.http.dto.ApiResponse;
 import com.arth.solabot.adapter.utils.NetworkUtils;
-import com.arth.solabot.plugin.resource.FilePaths;
+import com.arth.solabot.plugin.resource.LocalData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +22,11 @@ import java.nio.file.Path;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-public class PjskController {
+public class PjskPluginController {
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
-    private final FilePaths filePaths;
+    private final LocalData localData;
 
     /**
      * Mysekai 透视 map 请求
@@ -38,8 +38,7 @@ public class PjskController {
      */
     @GetMapping(ApiPaths.PJSK_MYSEKAI_MAP)
     public ResponseEntity<Resource> getMysekaiMap(@PathVariable String region, @PathVariable String id) throws IOException {
-        Path file = filePaths.resolveMysekaiResourcePath(FilePaths.PJSK_MYSEKAI_MAP, region, id);
-        Resource resource = new PathResource(file);
+        Resource resource = localData.resolveMysekaiResourcePath(LocalData.PJSK_MYSEKAI_MAP, region, id);
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
                 .body(resource);
@@ -56,8 +55,7 @@ public class PjskController {
      */
     @GetMapping(ApiPaths.PJSK_MYSEKAI_OVERVIEW)
     public ResponseEntity<Resource> getMysekaiOverview(@PathVariable String region, @PathVariable String id) throws IOException {
-        Path file = filePaths.resolveMysekaiResourcePath(FilePaths.PJSK_MYSEKAI_OVERVIEW, region, id);
-        Resource resource = new PathResource(file);
+        Resource resource = localData.resolveMysekaiResourcePath(LocalData.PJSK_MYSEKAI_OVERVIEW, region, id);
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
                 .body(resource);
@@ -72,7 +70,7 @@ public class PjskController {
     @GetMapping(ApiPaths.SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN)
     public ResponseEntity<Resource> getShadowrocketModuleForCnMysekai() {
         try {
-            Resource resource = new PathResource(FilePaths.SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN);
+            Resource resource = new PathResource(LocalData.SHADOWROCKET_MODULE_DOWNLOAD_MYSEKAI_CN);
             if (!resource.exists()) return ResponseEntity.notFound().build();
 
             return ResponseEntity.ok()

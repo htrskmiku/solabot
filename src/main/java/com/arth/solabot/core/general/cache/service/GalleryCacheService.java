@@ -23,8 +23,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * GalleryCacheService
- * <p>
+ * GalleryCacheService (已弃用，重构为本地增量同步)
+ *
  * 说明：
  * - 该服务不在本地持久化画廊图片，依赖远端 API 提供图片及元数据
  * - 采用 Redis 缓存元数据：hash (gallery:{role}:pics) + zset (gallery:{role}:pids)
@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Deprecated
 public class GalleryCacheService {
 
     private final RedisTemplate<String, String> redisTemplate;
@@ -45,12 +46,15 @@ public class GalleryCacheService {
     private static final String GALLERY_LOCK_PREFIX = "gallery:lock:";   // per-role lock 前缀
     private static final String PID_ROLE_MAP_KEY = "gallery:pid2role";   // pid → role 映射表
 
-    @Value("${app.parameter.plugin.kan.metadata-api}")
-    private String metadataApi;
-    @Value("${app.parameter.plugin.kan.pic-api-path}")
-    private String picApiPath;
-    @Value("${app.parameter.plugin.kan.auth-token}")
-    private String authToken;
+//    @Value("${app.parameter.plugin.kan.metadata-api}")
+//    private String metadataApi;
+    private String metadataApi = "REMOVED";
+//    @Value("${app.parameter.plugin.kan.pic-api-path}")
+//    private String picApiPath;
+    private  String picApiPath = "REMOVED";
+//    @Value("${app.parameter.plugin.kan.auth-token}")
+//    private String authToken;
+    private String authToken = "REMOVED";
 
     // 剩余过期时间大于该值时，不更新
     private static final long REFRESH_THRESHOLD_SECONDS = 300L;  // 5 minutes

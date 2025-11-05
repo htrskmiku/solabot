@@ -5,7 +5,7 @@ import com.arth.solabot.plugin.custom.pjsk.func.AssetsBundleResources;
 import com.arth.solabot.plugin.custom.pjsk.objects.PjskCard;
 import com.arth.solabot.plugin.custom.pjsk.objects.enums.CardAttributes;
 import com.arth.solabot.plugin.custom.pjsk.objects.enums.CardRarities;
-import com.arth.solabot.plugin.resource.FilePaths;
+import com.arth.solabot.plugin.resource.LocalData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
@@ -209,9 +209,9 @@ public class ImageRenderer {
             rarities = pjskCard.getRarities();
             thumbnails = AssetsBundleResources.getOrCacheThumbnailByCard(ctx, pjskCard);
 
-            boarder = ImageIO.read(ctx.filePaths().getCardBorderImgPath(pjskCard).toFile());
-            rarityImage = ImageIO.read((pjskCard.getRarities().equals(CardRarities.RARITY_BIRTHDAY) ? FilePaths.RENDER_RARITY_BIRTH.toFile() : FilePaths.RENDER_RARITY_STAR.toFile()));
-            attributeImage = ImageIO.read(ctx.filePaths().getCardAttrImgPath(pjskCard).toFile());
+            boarder = ImageIO.read(ctx.localData().getCardBorderImgPath(pjskCard).toFile());
+            rarityImage = ImageIO.read((pjskCard.getRarities().equals(CardRarities.RARITY_BIRTHDAY) ? LocalData.RENDER_RARITY_BIRTH.toFile() : LocalData.RENDER_RARITY_STAR.toFile()));
+            attributeImage = ImageIO.read(ctx.localData().getCardAttrImgPath(pjskCard).toFile());
         }
 
         public void noDrawRarity() {
@@ -269,7 +269,7 @@ public class ImageRenderer {
         private BoxDrawMethod boxDrawMethod;
 
         public Box(ArrayList<PjskCard> cards, BoxDrawMethod method) throws IOException {
-            this.background = ImageIO.read(FilePaths.RENDER_BG.toFile());
+            this.background = ImageIO.read(LocalData.RENDER_BG.toFile());
             this.boxDrawMethod = method;
             this.output = background;
             this.cards = cards;

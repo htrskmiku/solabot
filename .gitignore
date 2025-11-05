@@ -50,3 +50,5 @@ __pycache__/
 ### static resource ###
 static/pjsk/
 static/box/
+data/LunabotGallery/
+data/LunabotGalleryThumbnail/

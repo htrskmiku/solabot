@@ -5,7 +5,7 @@ import com.arth.solabot.core.bot.exception.ResourceNotFoundException;
 import com.arth.solabot.core.general.utils.FileUtils;
 import com.arth.solabot.plugin.custom.Pjsk;
 import com.arth.solabot.plugin.custom.pjsk.objects.PjskCard;
-import com.arth.solabot.plugin.resource.FilePaths;
+import com.arth.solabot.plugin.resource.LocalData;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -26,8 +26,8 @@ public class AssetsBundleResources {
     public static BufferedImage getOrCacheThumbnailByCard(Pjsk.BeanContext ctx, PjskCard card) {
         try {
             if (ctx.cache_cards_thumbnails()) {
-                FileUtils.createFolders(FilePaths.RENDER_THUMBNAILS_BASE);
-                Path path = ctx.filePaths().getThumbnailImgPath(card.getAssetsbundleName(), card.getSpecialTrainingStatus());
+                FileUtils.createFolders(LocalData.RENDER_THUMBNAILS_BASE);
+                Path path = ctx.localData().getCardThumbnailImgPath(card.getAssetsbundleName(), card.getSpecialTrainingStatus());
                 if (path.toFile().exists()) {
                     return ImageIO.read(path.toFile());
                 } else {

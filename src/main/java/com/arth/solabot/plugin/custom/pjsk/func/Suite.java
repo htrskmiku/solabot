@@ -11,7 +11,7 @@ import com.arth.solabot.plugin.custom.Pjsk;
 import com.arth.solabot.plugin.custom.pjsk.render.ImageRenderer;
 import com.arth.solabot.plugin.custom.pjsk.objects.PjskCardInfo;
 import com.arth.solabot.plugin.custom.pjsk.objects.PjskCard;
-import com.arth.solabot.plugin.resource.FilePaths;
+import com.arth.solabot.plugin.resource.LocalData;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -133,7 +133,7 @@ public final class Suite {
 
     //offline_mode=true时调用
     private static JsonNode getDefaultSuite(Pjsk.CoreBeanContext ctx) {
-        Path path = FilePaths.PJSK_MASTER_DATA_PATH.resolve("master").resolve("default_suite.json");
+        Path path = LocalData.PJSK_MASTER_DATA_PATH.resolve("master").resolve("default_suite.json");
         try {
             return ctx.objectMapper().readTree(path.toFile());
         } catch (IOException e) {
@@ -180,8 +180,8 @@ public final class Suite {
      * @param id
      * @return
      */
-    private static JsonNode getLocalOrRequestAndCacheSuite(Pjsk.CoreBeanContext ctx, String region, String id) {
-        Path suiteFilePath = ctx.filePaths().getSuitePath(region, id);
+    private static JsonNode getLocalOrRequestAndCacheSuite(Pjsk.CoreBeanContext ctx, String region, String id) throws IOException {
+        Path suiteFilePath = ctx.localData().getSuitePath(region, id);
         if (FileUtils.fileExists(suiteFilePath)) {
             try {
                 return ctx.objectMapper().readTree(suiteFilePath.toFile());
@@ -194,9 +194,9 @@ public final class Suite {
             JsonNode node = requestSuite(ctx, region, id);
             try {
                 switch (region) {
-                    case "cn" -> FileUtils.createFolders(FilePaths.PJSK_SUITE_CN.toAbsolutePath());
-                    case "jp" -> FileUtils.createFolders(FilePaths.PJSK_SUITE_JP.toAbsolutePath());
-                    case "tw" -> FileUtils.createFolders(FilePaths.PJSK_SUITE_TW.toAbsolutePath());
+                    case "cn" -> FileUtils.createFolders(LocalData.PJSK_SUITE_CN.toAbsolutePath());
+                    case "jp" -> FileUtils.createFolders(LocalData.PJSK_SUITE_JP.toAbsolutePath());
+                    case "tw" -> FileUtils.createFolders(LocalData.PJSK_SUITE_TW.toAbsolutePath());
                 }
                 FileUtils.getOrCreateFile(suiteFilePath);
                 String content = ctx.objectMapper().writeValueAsString(node);

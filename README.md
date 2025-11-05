@@ -22,6 +22,12 @@ Redis 7
 
 NapCat（OneBot v11）
 
+# to do
+
+1. 如何高效地同步表情包图库？1GB+ 全量下载太大
+2. 组卡器微服务
+3. PJSK 资源管理器（自动检查并拉取最新 master data）
+
 # docker
 
 ```bash
@@ -47,6 +53,6 @@ mvn clean package
 mvn spring-boot:run  # java -jar target/bot-0.0.1-SNAPSHOT.jar
 ```
 
-# thanks!
+# thanks
 
-Thanks to junior schoolmate [htrskmiku](https://github.com/htrskmiku) for the contribution.
+Thanks to junior schoolmate [htrskmiku](https://github.com/htrskmiku) for the contribution!

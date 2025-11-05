@@ -12,7 +12,7 @@ import com.arth.solabot.core.general.database.mapper.PjskBindingMapper;
 import com.arth.solabot.plugin.custom.pjsk.func.General;
 import com.arth.solabot.plugin.custom.pjsk.func.Mysekai;
 import com.arth.solabot.plugin.custom.pjsk.func.Suite;
-import com.arth.solabot.plugin.resource.FilePaths;
+import com.arth.solabot.plugin.resource.LocalData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -94,7 +94,7 @@ public class Pjsk extends Plugin {
     private final Sender sender;
     private final WebClient webClient;
     private final ApiPaths apiPaths;
-    private final FilePaths filePaths;
+    private final LocalData localData;
     private final ActionChainBuilder actionChainBuilder;
     private final ImageCacheService imageCacheService;
     private final PjskBindingMapper pjskBindingMapper;
@@ -129,7 +129,7 @@ public class Pjsk extends Plugin {
                             sender,
                             webClient,
                             apiPaths,
-                            filePaths,
+                            localData,
                             actionChainBuilder,
                             imageCacheService,
                             pjskBindingMapper,
@@ -152,7 +152,7 @@ public class Pjsk extends Plugin {
         Sender sender();
         WebClient webClient();
         ApiPaths apiPaths();
-        FilePaths filePaths();
+        LocalData localData();
         ActionChainBuilder actionChainBuilder();
         ImageCacheService imageCacheService();
         PjskBindingMapper pjskBindingMapper();
@@ -170,7 +170,7 @@ public class Pjsk extends Plugin {
             Sender sender,
             WebClient webClient,
             ApiPaths apiPaths,
-            FilePaths filePaths,
+            LocalData localData,
             ActionChainBuilder actionChainBuilder,
             ImageCacheService imageCacheService,
             PjskBindingMapper pjskBindingMapper,

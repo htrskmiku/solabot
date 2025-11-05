@@ -6,8 +6,9 @@ import com.arth.solabot.core.bot.exception.InternalServerErrorException;
 import com.arth.solabot.core.bot.exception.ResourceNotFoundException;
 import com.arth.solabot.core.general.database.domain.PjskBinding;
 import com.arth.solabot.plugin.custom.Pjsk;
-import com.arth.solabot.plugin.resource.FilePaths;
+import com.arth.solabot.plugin.resource.LocalData;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,13 +49,11 @@ public final class Mysekai {
     // ***** ============= helper ============= *****
 
     public static void msmHelper(Pjsk.CoreBeanContext ctx, ParsedPayloadDTO payload, String pjskId, String region) {
-        Path file = getFilePath(ctx, region, pjskId);
-        String updatedTime = null;
+        String updatedTime;
 
-        if (!Files.exists(file)) {
-            ctx.sender().replyText(payload, "服务器上没有找到你的 MySekai 数据，可能是抓包未成功，小概率服务器解析失败，需要根据日志分析");
-            return;
-        } else {
+        try {
+            Path file = getFilePath(region, pjskId);
+
             try {
                 FileTime timestamp = Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime();
                 updatedTime = ctx.dateTimeFormatter().format(timestamp.toInstant());
@@ -62,6 +61,9 @@ public final class Mysekai {
                 ctx.sender().replyText(payload, "MySekai 数据存在，但获取更新日期失败: 抛出了 IOException");
                 throw new InternalServerErrorException("IOException: " + e.getCause().getMessage(), "MySekai 数据存在，但获取更新日期失败: IOException");
             }
+        } catch (FileNotFoundException e) {
+            ctx.sender().replyText(payload, "服务器上没有找到你的 MySekai 数据，可能是抓包未成功，小概率服务器解析失败，需要根据日志分析");
+            return;
         }
 
         String overviewImgUrl = ctx.apiPaths().buildMysekaiOverviewUrl(region, pjskId);
@@ -78,11 +80,11 @@ public final class Mysekai {
         ctx.sender().pushActionJSON(payload.getSelfId(), json);
     }
 
-    private static Path getFilePath(Pjsk.CoreBeanContext ctx, String region, String pjskId) {
-        Path dir = FilePaths.PJSK_MYSEKAI_MAP;
-        if (!Files.exists(dir) || !Files.isDirectory(dir)) throw new ResourceNotFoundException("path does not exist");
+    private static Path getFilePath(String region, String pjskId) throws FileNotFoundException {
+        Path dir = LocalData.PJSK_MYSEKAI_MAP;
+        if (!Files.exists(dir) || !Files.isDirectory(dir)) throw new FileNotFoundException("path does not exist");
         Path filePath = dir.resolve(region + "_" + pjskId + ".png");
-        if (!Files.exists(filePath)) throw new ResourceNotFoundException("File not found: " + filePath.getFileName());
+        if (!Files.exists(filePath)) throw new FileNotFoundException("File not found: " + filePath.getFileName());
         return filePath;
     }
 

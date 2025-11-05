@@ -5,7 +5,7 @@ import com.arth.solabot.plugin.custom.pjsk.objects.enums.CardAttributes;
 import com.arth.solabot.plugin.custom.pjsk.objects.enums.CardCharacters;
 import com.arth.solabot.plugin.custom.pjsk.objects.enums.CardRarities;
 import com.arth.solabot.plugin.custom.pjsk.objects.PjskCardInfo;
-import com.arth.solabot.plugin.resource.FilePaths;
+import com.arth.solabot.plugin.resource.LocalData;
 import com.arth.solabot.plugin.resource.MemoryData;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ public final class LocalResourceData {
     public static JsonNode cards;
 
     public static String getAssetbundleName(Pjsk.CoreBeanContext ctx, int cardId) throws IOException {
-        Path p = FilePaths.PJSK_MASTER_DATA_PATH.resolve("master").resolve("cards.json");
+        Path p = LocalData.PJSK_MASTER_DATA_PATH.resolve("master").resolve("cards.json");
         cards = ctx.objectMapper().readTree(p.toFile());
         for (JsonNode card : cards) {
             if (cardId == card.get("id").asInt()) return card.get("assetbundleName").asText();
@@ -76,7 +76,7 @@ public final class LocalResourceData {
 
     public static void doCacheCardInfoJob(Pjsk.CoreBeanContext ctx) throws IOException {
         log.info("Caching card info for first use...");
-        Path p = FilePaths.PJSK_MASTER_DATA_PATH.resolve("master").resolve("cards.json");
+        Path p = LocalData.PJSK_MASTER_DATA_PATH.resolve("master").resolve("cards.json");
         JsonNode cards = ctx.objectMapper().readTree(p.toFile());
         MemoryData.cachedCardsNew = new ArrayList<>(cards.size());
         MemoryData.cachedCardsNew.add(null);

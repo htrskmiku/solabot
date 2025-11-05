@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import java.io.FileNotFoundException;
+
 /**
  * 全局 HTTP 异常处理器，封装 ApiResponse
  */
@@ -60,7 +62,7 @@ public class GlobalHttpExceptionHandler {
                 .body(ApiResponse.error(403_00, e.getMessage() != null ? e.getMessage() : "Access denied"));
     }
 
-    @ExceptionHandler(NoHandlerFoundException.class)
+    @ExceptionHandler({NoHandlerFoundException.class, FileNotFoundException.class})
     public ResponseEntity<ApiResponse<Void>> handleNotFound(NoHandlerFoundException e) {
         log.warn("[adapter.http] no handler found: {}", e.getRequestURL());
         return ResponseEntity
