@@ -54,7 +54,7 @@ websocket:
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/appdb
-    username: app
+    username: app 
     password: app
     driver-class-name: org.postgresql.Driver
 

@@ -7,7 +7,7 @@ import com.arth.solabot.core.bot.exception.InternalServerErrorException;
 import com.arth.solabot.core.bot.exception.ResourceNotFoundException;
 import com.arth.solabot.core.general.database.domain.PjskBinding;
 import com.arth.solabot.core.general.utils.FileUtils;
-import com.arth.solabot.plugin.custom.pjsk.Pjsk;
+import com.arth.solabot.plugin.custom.Pjsk;
 import com.arth.solabot.plugin.custom.pjsk.render.ImageRenderer;
 import com.arth.solabot.plugin.custom.pjsk.objects.PjskCardInfo;
 import com.arth.solabot.plugin.custom.pjsk.objects.PjskCard;

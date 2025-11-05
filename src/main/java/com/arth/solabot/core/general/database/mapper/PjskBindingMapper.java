@@ -6,8 +6,8 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 /**
 * @author asheo
 * @description 针对表【t_pjsk_binding】的数据库操作Mapper
-* @createDate 2025-11-03 13:24:37
-* @Entity com.arth.bot.core.database.domain.PjskBinding
+* @createDate 2025-11-05 21:35:45
+* @Entity com.arth.solabot.core.general.database.domain.PjskBinding
 */
 public interface PjskBindingMapper extends BaseMapper<PjskBinding> {
 

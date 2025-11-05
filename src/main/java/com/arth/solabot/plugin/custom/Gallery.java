@@ -13,7 +13,7 @@ import java.util.List;
 
 @BotPlugin(value = {"看"}, glued = true)
 @RequiredArgsConstructor
-public class Kan extends Plugin {
+public class Gallery extends Plugin {
 
     private final Sender sender;
     private final GalleryCacheService galleryCacheService;

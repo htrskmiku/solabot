@@ -1,6 +1,6 @@
 package com.arth.solabot.plugin.custom.pjsk.func;
 
-import com.arth.solabot.plugin.custom.pjsk.Pjsk;
+import com.arth.solabot.plugin.custom.Pjsk;
 import com.arth.solabot.plugin.custom.pjsk.objects.enums.CardAttributes;
 import com.arth.solabot.plugin.custom.pjsk.objects.enums.CardCharacters;
 import com.arth.solabot.plugin.custom.pjsk.objects.enums.CardRarities;

@@ -1,4 +1,4 @@
-package com.arth.solabot.plugin.custom.pjsk;
+package com.arth.solabot.plugin.custom;
 
 import com.arth.solabot.adapter.controller.ApiPaths;
 import com.arth.solabot.adapter.fetcher.http.ImgService;
@@ -9,7 +9,6 @@ import com.arth.solabot.core.bot.dto.ParsedPayloadDTO;
 import com.arth.solabot.core.bot.invoker.annotation.BotCommand;
 import com.arth.solabot.core.bot.invoker.annotation.BotPlugin;
 import com.arth.solabot.core.general.database.mapper.PjskBindingMapper;
-import com.arth.solabot.plugin.custom.Plugin;
 import com.arth.solabot.plugin.custom.pjsk.func.General;
 import com.arth.solabot.plugin.custom.pjsk.func.Mysekai;
 import com.arth.solabot.plugin.custom.pjsk.func.Suite;

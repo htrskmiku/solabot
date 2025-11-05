@@ -34,6 +34,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 该插件目前还不能正常使用。目前尚不能够自动检测到开播后推送订阅消息，处于尚未完成的状态。
+ */
 @Slf4j
 @BotPlugin({"live"})
 @RequiredArgsConstructor
