@@ -182,7 +182,7 @@ public final class Suite {
      */
     private static JsonNode getLocalOrRequestAndCacheSuite(Pjsk.CoreBeanContext ctx, String region, String id) throws IOException {
         Path suiteFilePath = ctx.localData().getSuitePath(region, id);
-        if (FileUtils.fileExists(suiteFilePath)) {
+        if (Files.exists(suiteFilePath)) {
             try {
                 return ctx.objectMapper().readTree(suiteFilePath.toFile());
             } catch (IOException e) {
@@ -194,9 +194,9 @@ public final class Suite {
             JsonNode node = requestSuite(ctx, region, id);
             try {
                 switch (region) {
-                    case "cn" -> FileUtils.createFolders(LocalData.PJSK_SUITE_CN.toAbsolutePath());
-                    case "jp" -> FileUtils.createFolders(LocalData.PJSK_SUITE_JP.toAbsolutePath());
-                    case "tw" -> FileUtils.createFolders(LocalData.PJSK_SUITE_TW.toAbsolutePath());
+                    case "cn" -> Files.createDirectories(LocalData.PJSK_SUITE_CN.toAbsolutePath());
+                    case "jp" -> Files.createDirectories(LocalData.PJSK_SUITE_JP.toAbsolutePath());
+                    case "tw" -> Files.createDirectories(LocalData.PJSK_SUITE_TW.toAbsolutePath());
                 }
                 FileUtils.getOrCreateFile(suiteFilePath);
                 String content = ctx.objectMapper().writeValueAsString(node);

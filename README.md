@@ -24,9 +24,8 @@ NapCat（OneBot v11）
 
 # to do
 
-1. 如何高效地同步表情包图库？1GB+ 全量下载太大
-2. 组卡器微服务
-3. PJSK 资源管理器（自动检查并拉取最新 master data）
+1. 组卡器微服务
+2. PJSK 资源管理器（自动检查并拉取最新 master data）
 
 # docker
 

@@ -66,14 +66,18 @@ public class LocalData {
         return new PathResource(file);
     }
 
-    public Resource getGalleryImgPath(String pid) throws IOException {
+    public Resource getGalleryImgResource(String pid) throws IOException {
         Gallery.FilePair filePair = Gallery.getFilePairByPid(pid);
-        Path file = GALLERY_IMG_DIR.resolve(filePair.role()).resolve(filePair.filename());
+        Path file = GALLERY_IMG_DIR.resolve(filePair.roleName()).resolve(filePair.fileName());
         verify(file, GALLERY_IMG_BASE);
         return new PathResource(file);
     }
 
-    public Resource getGalleryThumbnailPath(String role) throws IOException {
+    public Path getGalleryRolePath(String role) throws IOException {
+        return GALLERY_IMG_DIR.resolve(role);
+    }
+
+    public Resource getGalleryThumbnailResource(String role) throws IOException {
         Path file = GALLERY_THUMBNAILS_BASE.resolve(String.format("%s.png", role.toLowerCase()));
         verify(file, GALLERY_THUMBNAILS_BASE);
         return new PathResource(file);

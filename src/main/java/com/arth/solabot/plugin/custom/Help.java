@@ -19,6 +19,7 @@ public class Help extends Plugin {
     private final ForwardChainBuilder forwardChainBuilder;
     private final ApiPaths apiPaths;
 
+    @Override
     @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
         ForwardChainBuilder building = forwardChainBuilder.create().addCustomNode(payload.getSelfId(), "bot", n -> n.text("""

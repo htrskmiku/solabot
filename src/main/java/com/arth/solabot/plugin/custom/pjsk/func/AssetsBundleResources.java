@@ -11,6 +11,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class AssetsBundleResources {
@@ -26,7 +27,7 @@ public class AssetsBundleResources {
     public static BufferedImage getOrCacheThumbnailByCard(Pjsk.BeanContext ctx, PjskCard card) {
         try {
             if (ctx.cache_cards_thumbnails()) {
-                FileUtils.createFolders(LocalData.RENDER_THUMBNAILS_BASE);
+                Files.createDirectories(LocalData.RENDER_THUMBNAILS_BASE);
                 Path path = ctx.localData().getCardThumbnailImgPath(card.getAssetsbundleName(), card.getSpecialTrainingStatus());
                 if (path.toFile().exists()) {
                     return ImageIO.read(path.toFile());

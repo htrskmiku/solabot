@@ -57,14 +57,14 @@ public class Img extends Plugin {
               - png: 转png
               - check: 检查图片url""";
 
-    @BotCommand("index")
     @Override
+    @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
         sender.replyText(payload, "具体的图片处理命令是什么呢？");
     }
 
-    @BotCommand("help")
     @Override
+    @BotCommand("help")
     public void help(ParsedPayloadDTO payload) {
         super.help(payload);
     }

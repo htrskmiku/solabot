@@ -32,14 +32,14 @@ public class Pjsk extends Plugin {
     @Getter
     public final String helpText = "请通过 /help 查看 pjsk 模块具体的命令";
 
-    @BotCommand("index")
     @Override
+    @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
         sender.replyText(payload, "请接 pjsk 模块的具体命令哦");
     }
 
-    @BotCommand("help")
     @Override
+    @BotCommand("help")
     public void help(ParsedPayloadDTO payload) {
         sender.replyText(payload, helpText);
     }

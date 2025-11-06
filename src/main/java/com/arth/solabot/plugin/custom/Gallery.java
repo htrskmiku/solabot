@@ -5,28 +5,31 @@ import com.arth.solabot.adapter.sender.Sender;
 import com.arth.solabot.core.bot.dto.ParsedPayloadDTO;
 import com.arth.solabot.core.bot.invoker.annotation.BotCommand;
 import com.arth.solabot.core.bot.invoker.annotation.BotPlugin;
+import com.arth.solabot.core.general.utils.FileUtils;
 import com.arth.solabot.plugin.resource.LocalData;
 import com.arth.solabot.plugin.resource.MemoryData;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.support.CronTrigger;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -38,25 +41,30 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class Gallery extends Plugin {
 
-    @Value("${app.parameter.plugin.gallery.BaiduPCS-Go}")
-    private String BAIDUPCS_GO;
-    @Value("${app.parameter.plugin.gallery.luna-gallery-url}")
-    private String UPDATE_REQUEST_URL;
-    @Value("${app.parameter.plugin.gallery.pwd}")
-    private String PWD;
+    @Value("${app.parameter.plugin.gallery.metadata-api}")
+    private String METADATA_URL;
+    @Value("${app.parameter.plugin.gallery.auth-token}")
+    private String AUTH_TOKEN;
+    @Value("${app.parameter.plugin.gallery.pic-api}")
+    private String PIC_URL;
     @Value("${app.parameter.plugin.gallery.update-ttl}")
     private int UPDATE_TTL;
     @Value("${app.parameter.plugin.gallery.update-cron}")
     private String UPDATE_CRON;
 
     private Instant lastUpdateTime = null;
-    private Map<String, List<String>> roles = new HashMap<>();  // role → set(id)
+    private Map<String, List<String>> roles = new HashMap<>();              // role → set(id)
     private List<String> ids = new ArrayList<>();
-    private static Map<String, FilePair> idToFile = new HashMap<>();   // id → (role, filename)
+    private static final Map<String, FilePair> idToFile = new HashMap<>();  // id → (role, fileName)，作为锁记录（因此设为 final）
     private final Random rand = new Random();
 
     private final Sender sender;
     private final ApiPaths apiPaths;
+    private final LocalData localData;
+    private final FileUtils fileUtils;
+    private final WebClient webClient;
+    private final ObjectMapper objectMapper;
+    private final TaskScheduler taskScheduler;
 
     @Getter
     public final String helpText = """
@@ -80,8 +88,7 @@ public class Gallery extends Plugin {
 
     @BotCommand("index")
     public void index(ParsedPayloadDTO payload, List<String> args) {
-        // tryUpdateGallery();
-        updateRolesMapAndDrawThumbnails();
+        tryUpdateGallery();
 
         for (String arg : args) {
             // 空字符
@@ -97,7 +104,8 @@ public class Gallery extends Plugin {
 
             // 缩略图
             if (arg.length() >= 2 && (arg.startsWith("所有") || arg.startsWith("全部"))) {
-                sender.sendImage(payload, apiPaths.buildGalleryThumbnailUrl(arg.substring(2)));
+                String role = MemoryData.alias.get(arg.substring(2));
+                sender.sendImage(payload, apiPaths.buildGalleryThumbnailUrl(role));
                 continue;
             }
 
@@ -122,18 +130,40 @@ public class Gallery extends Plugin {
 
     @Override
     public void index(ParsedPayloadDTO payload) {
-
     }
 
+    @Override
     @BotCommand("help")
     public void help(ParsedPayloadDTO payload) {
         super.help(payload);
     }
 
+    @Override
+    public void registerTask() {
+        Runnable task = () -> {
+            try {
+                int count = updateGalleryImgs();
+                updateMapsAndDrawThumbnails();
+                log.info("[plugin.gallery] scheduled task completed successfully, updated {} images", count);
+            } catch (Exception e) {
+                log.error("[plugin.gallery] scheduled task failed", e);
+            }
+        };
+
+        taskScheduler.schedule(task, new CronTrigger(UPDATE_CRON));
+
+        log.info("[plugin.gallery] scheduled task registered for daily update at 4:00 AM");
+    }
+
     @BotCommand({"update", "刷新", "更新"})
     public void update(ParsedPayloadDTO payload) {
-        updateAllGallery();
-        sender.replyText(payload, "已同步至最新图库...");
+        try {
+            int count = updateGalleryImgs();
+            updateMapsAndDrawThumbnails();
+            sender.replyText(payload, "已同步至最新图库...更新了" + count + "张图片");
+        } catch (Exception e) {
+            sender.replyText(payload, "同步图库失败：" + e.getCause());
+        }
     }
 
 
@@ -148,84 +178,77 @@ public class Gallery extends Plugin {
 
     private void tryUpdateGallery() {
         if (lastUpdateTime == null || Duration.between(lastUpdateTime, Instant.now()).toHours() > UPDATE_TTL) {
-            updateAllGallery();
+            updateGalleryImgs();
+            updateMapsAndDrawThumbnails();
         }
     }
 
-    /**
-     * 使用 <a href="https://github.com/qjfoidnh/BaiduPCS-Go">BaiduPCS-Go</a> 进行图库数据的同步下载
-     */
-    private void updateAllGallery() {
+    private int updateGalleryImgs() {
         log.info("[plugin.gallery] start syncing gallery...");
+        int count = 0;
 
-        synchronized (this) {
-            String dirName = LocalData.GALLERY_DIR_NAME.getFileName().toString();
-            Path localDir = LocalData.GALLERY_IMG_BASE;
-            try {
-                Files.createDirectories(localDir);
-            } catch (IOException e) {
-                log.error("[plugin.gallery] failed to create local gallery dir", e);
-                return;
-            }
+        // 依 idToFile 作为判断图片是否已否存在的标准，如果 idToFile 尚未初始化，则先遍历一次本地路径构建缓存
+        if (idToFile == null || idToFile.isEmpty()) {
+            updateMapsAndDrawThumbnails();
+        }
 
-            try {
-                log.info("[pcs] transferring shared folder from {}", UPDATE_REQUEST_URL);
-                ProcessBuilder importPb = new ProcessBuilder(
-                        BAIDUPCS_GO, "transfer", UPDATE_REQUEST_URL, PWD
-                );
-                importPb.directory(new File("."));
-                importPb.redirectErrorStream(true);
-                Process importProcess = importPb.start();
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(importProcess.getInputStream(), StandardCharsets.UTF_8))) {
-                    reader.lines().forEach(line -> log.info("[pcs] {}", line));
-                }
-                importProcess.waitFor(3, TimeUnit.MINUTES);
-                int importCode = importProcess.exitValue();
-                if (importCode != 0) {
-                    log.warn("[pcs] transfer exited with code {}, continuing anyway", importCode);
-                }
+        try {
+            String jsonResponse = webClient.get()
+                    .uri(METADATA_URL)
+                    .headers(headers -> headers.setBearerAuth(AUTH_TOKEN))
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
 
-                log.info("[pcs] start downloading from /{} to {}", dirName, localDir);
-                ProcessBuilder pb = new ProcessBuilder(
-                        BAIDUPCS_GO, "download", "/" + dirName, "--ow", "--saveto", localDir.toString()
-                );
-                pb.directory(new File("."));
-                pb.redirectErrorStream(true);
-                Process process = pb.start();
+            ObjectNode metadata = (ObjectNode) objectMapper.readTree(jsonResponse);
 
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                    reader.lines().forEach(line -> log.info("[pcs] {}", line));
-                }
+            for (Map.Entry<String, JsonNode> entry : metadata.properties()) {
+                String roleName = entry.getKey();
+                JsonNode roleNode = entry.getValue();
 
-                boolean finished = process.waitFor(10, TimeUnit.MINUTES);
-                if (!finished) {
-                    process.destroy();
-                    log.warn("[plugin.gallery] pcs download timeout — process killed");
-                } else {
-                    int exitCode = process.exitValue();
-                    if (exitCode == 0) {
-                        updateRolesMapAndDrawThumbnails();
-                        lastUpdateTime = Instant.now();
-                        log.info("[plugin.gallery] sync completed successfully");
-                    } else {
-                        log.error("[plugin.gallery] pcs exited with code {}", exitCode);
+                JsonNode picsArr = roleNode.get("pics");
+                if (picsArr != null && picsArr.isArray()) {
+                    for (JsonNode pic : picsArr) {
+                        String pid = pic.get("pid").asText();
+
+                        boolean shouldDownload;
+                        synchronized (idToFile) {
+                            shouldDownload = !idToFile.containsKey(pid);
+                        }
+
+                        if (!shouldDownload) continue;
+
+                        String url = PIC_URL.replace("{path}", pic.get("path").asText());
+                        Path saveDir = localData.getGalleryRolePath(roleName);
+
+                        CompletableFuture<String> future = fileUtils.downloadImageAsync(url, saveDir, pid);
+                        String fileName = future.get();
+                        log.debug("[plugin.gallery] downloaded image {}", fileName);
+
+                        synchronized (idToFile) {
+                            if (!idToFile.containsKey(pid)) {
+                                idToFile.put(pid, new FilePair(roleName, fileName));
+                                count++;
+                            }
+                        }
                     }
                 }
-
-            } catch (Exception e) {
-                log.error("[plugin.gallery] failed to sync gallery", e);
             }
+            log.info("[plugin.gallery] successfully synced {} images", count);
+            lastUpdateTime = Instant.now();
+            return count;
+        } catch (Exception e) {
+            log.error("[plugin.gallery] failed to sync", e);
+            return -1;
         }
     }
 
     /**
      * 更新 Roles 映射表，同时绘制各角色缩略图
      */
-    private void updateRolesMapAndDrawThumbnails() {
+    private void updateMapsAndDrawThumbnails() {
         Map<String, List<String>> newRoles = new HashMap<>((roles != null) ? roles.size() : 16);
-        Map<String, FilePair> newIdToFile = new HashMap<>((idToFile != null) ? idToFile.size() : 16);
+        idToFile.clear();
 
         try {
             Files.createDirectories(LocalData.GALLERY_THUMBNAILS_BASE);
@@ -247,10 +270,10 @@ public class Gallery extends Plugin {
 
                 try (Stream<Path> files = Files.list(roleDir)) {
                     files.filter(Files::isRegularFile).forEach(file -> {
-                        String filename = file.getFileName().toString();
-                        String id = filename.contains(".") ? filename.substring(0, filename.lastIndexOf('.')) : filename;
-                        idToFileOfRole.put(id, filename);
-                        newIdToFile.put(id, new FilePair(roleName, filename));
+                        String fileName = file.getFileName().toString();
+                        String id = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
+                        idToFileOfRole.put(id, fileName);
+                        idToFile.put(id, new FilePair(roleName, fileName));
                     });
                 } catch (IOException e) {
                     log.error("[plugin.gallery] failed to list files for role: {}", roleName, e);
@@ -280,9 +303,9 @@ public class Gallery extends Plugin {
                         g.setFont(new Font("SansSerif", Font.PLAIN, 12));
 
                         AtomicInteger index = new AtomicInteger(0);
-                        idToFileOfRole.forEach((id, filename) -> {
+                        idToFileOfRole.forEach((id, fileName) -> {
                             try {
-                                Path file = roleDir.resolve(filename);
+                                Path file = roleDir.resolve(fileName);
                                 BufferedImage img = ImageIO.read(file.toFile());
                                 if (img == null) return;  // skip if unreadable
 
@@ -299,7 +322,7 @@ public class Gallery extends Plugin {
                                 int y = margin + yIndex * (thumbHeight + labelHeight + margin);
 
                                 g.drawImage(img, x + (thumbWidth - scaledW) / 2, y + (thumbHeight - scaledH) / 2, scaledW, scaledH, null);
-                                g.drawString(id, x + 5, y + thumbHeight + 15);
+                                g.drawString(id, x + (thumbWidth - g.getFontMetrics().stringWidth(id)) / 2, y + thumbHeight + 15);
                                 index.incrementAndGet();
                             } catch (Exception e) {
                                 log.warn("[plugin.gallery] failed to process image for role {} id {}", roleName, id, e);
@@ -322,11 +345,10 @@ public class Gallery extends Plugin {
         }
 
         roles = newRoles;
-        idToFile = newIdToFile;
         ids = new ArrayList<>(idToFile.keySet());
-        log.info("[plugin.gallery] all roles updated and all thumbnails generated, found {} imgs", newIdToFile.size());
+        log.info("[plugin.gallery] all roles updated and thumbnails generated, found {} imgs", idToFile.size());
     }
 
-    public record FilePair(String role, String filename) {
+    public record FilePair(String roleName, String fileName) {
     }
 }

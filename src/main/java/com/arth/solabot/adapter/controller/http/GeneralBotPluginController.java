@@ -29,7 +29,7 @@ public class GeneralBotPluginController {
      */
     @GetMapping(ApiPaths.GALLERY_IMG)
     public ResponseEntity<Resource> getGalleryImg(@PathVariable String pid) throws IOException {
-        Resource resource = localData.getGalleryImgPath(pid);
+        Resource resource = localData.getGalleryImgResource(pid);
         Path path = resource.getFile().toPath();
 
         String contentType = Files.probeContentType(path);
@@ -49,7 +49,7 @@ public class GeneralBotPluginController {
      */
     @GetMapping(ApiPaths.GALLERY_THUMBNAILS)
     public ResponseEntity<Resource> getGalleryThumbnail(@PathVariable String role) throws IOException {
-        Resource resource = localData.getGalleryThumbnailPath(role);
+        Resource resource = localData.getGalleryThumbnailResource(role);
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
                 .body(resource);

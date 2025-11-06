@@ -100,14 +100,14 @@ public class Live extends Plugin {
         );
     }
 
-    @BotCommand("index")
     @Override
+    @BotCommand("index")
     public void index(ParsedPayloadDTO payload) {
         sender.replyText(payload, helpText);
     }
 
-    @BotCommand("help")
     @Override
+    @BotCommand("help")
     public void help(ParsedPayloadDTO payload) {
         super.help(payload);
     }

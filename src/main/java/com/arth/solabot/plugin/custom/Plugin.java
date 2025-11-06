@@ -8,8 +8,12 @@ import lombok.Setter;
 
 public abstract class Plugin {
 
-    @Setter
     protected PluginRegistry pluginRegistry;
+
+    public void setPluginRegistry(PluginRegistry pluginRegistry) {
+        this.pluginRegistry = pluginRegistry;
+        registerTask();  // 注册定时任务，默认无，子类按需重写
+    }
 
     @BotCommand("index")
     public abstract void index(ParsedPayloadDTO payload);
@@ -20,4 +24,7 @@ public abstract class Plugin {
     }
 
     public abstract String getHelpText();
+
+    protected void registerTask() {
+    }
 }

@@ -30,9 +30,9 @@ app:
             thumbnail-api: "https://storage.sekai.best/sekai-jp-assets/thumbnail/chara/{assetbundle_name}_{status}.webp"
 
       gallery:
-        BaiduPCS-Go: "C:\\Users\\asheo\\Downloads\\BaiduPCS-Go-v4.0.0-windows-x64\\BaiduPCS-Go.exe"
-        luna-gallery-url: "https://pan.baidu.com/s/1TSh7gTx-7p_OOruJzG1D7g"
-        pwd: "hi4o"
+        metadata-api: "https://bot.teaphenby.com/api/galleries"
+        pic-api: "https://bot.teaphenby.com/api/gallery/{path}"
+        auth-token: "arthur-stat"
         update-ttl: 24  # 本地图库有效期，单位为小时，超过该时间未更新则在下一次调用时懒加载式进行同步
         update-cron: "0 0 4 * * *"  # 每日凌晨四点时主动同步
 
@@ -43,7 +43,7 @@ app:
 logging:
   level:
     root: INFO
-    com.arth.bot: INFO
+    com.arth.solabot: DEBUG
 
 websocket:
   suffix: "/onebot/v11/ws"
